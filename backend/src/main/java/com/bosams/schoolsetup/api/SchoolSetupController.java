@@ -1,5 +1,6 @@
 package com.bosams.schoolsetup.api;
 
+import com.bosams.common.ConflictException;
 import com.bosams.common.NotFoundException;
 import com.bosams.schoolsetup.domain.AcademicYear;
 import com.bosams.schoolsetup.domain.BusRoute;
@@ -137,6 +138,9 @@ public class SchoolSetupController {
     @PutMapping("/academic-years/{id}/active")
     public AcademicYearResponse setActive(@PathVariable Long id, @RequestBody @Valid SetActiveAcademicYearRequest r) {
         var y = years.findById(id).orElseThrow(() -> new NotFoundException("Academic year not found"));
+        if (!y.getSchool().getId().equals(r.schoolId())) {
+            throw new ConflictException("Academic year does not belong to school");
+        }
         y.setActive(true);
         years.findBySchoolId(r.schoolId(), Pageable.unpaged()).forEach(a -> {
             if (!a.getId().equals(id)) {

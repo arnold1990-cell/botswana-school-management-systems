@@ -1,9 +1,18 @@
-package com.bosams.hr;
+package com.bosams.hr.service;
 
 import com.bosams.common.ConflictException;
 import com.bosams.common.DuplicateResourceException;
 import com.bosams.common.NotFoundException;
-import com.bosams.hr.HrDtos.*;
+import com.bosams.hr.dto.HrDtos.*;
+import com.bosams.hr.entity.*;
+import com.bosams.hr.repository.AppraisalRecordRepository;
+import com.bosams.hr.repository.EducatorSubjectExperienceRepository;
+import com.bosams.hr.repository.RegisterClassAssignmentRepository;
+import com.bosams.hr.repository.StaffAttendanceRecordRepository;
+import com.bosams.hr.repository.StaffLeaveRequestRepository;
+import com.bosams.hr.repository.StaffMemberRepository;
+import com.bosams.hr.repository.TrainingAttendanceRepository;
+import com.bosams.hr.repository.TrainingProgramRepository;
 import com.bosams.schoolsetup.repository.AcademicYearRepository;
 import com.bosams.schoolsetup.repository.ClassRoomRepository;
 import java.time.Instant;
@@ -17,7 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
-class HrService {
+public class HrService {
     private final StaffMemberRepository staffRepo;
     private final EducatorSubjectExperienceRepository expRepo;
     private final RegisterClassAssignmentRepository registerRepo;
@@ -29,7 +38,7 @@ class HrService {
     private final AcademicYearRepository academicYears;
     private final ClassRoomRepository classRooms;
 
-    HrService(StaffMemberRepository staffRepo, EducatorSubjectExperienceRepository expRepo, RegisterClassAssignmentRepository registerRepo,
+    public HrService(StaffMemberRepository staffRepo, EducatorSubjectExperienceRepository expRepo, RegisterClassAssignmentRepository registerRepo,
               StaffLeaveRequestRepository leaveRepo, StaffAttendanceRecordRepository attendanceRepo, TrainingProgramRepository trainingRepo,
               TrainingAttendanceRepository trainingAttendanceRepo, AppraisalRecordRepository appraisalRepo, AcademicYearRepository academicYears,
               ClassRoomRepository classRooms) {
@@ -37,41 +46,41 @@ class HrService {
         this.trainingRepo = trainingRepo; this.trainingAttendanceRepo = trainingAttendanceRepo; this.appraisalRepo = appraisalRepo; this.academicYears = academicYears; this.classRooms = classRooms;
     }
 
-    StaffResponse createStaff(StaffUpsertRequest r, String actor){ ensureStaffUnique(r.schoolId(), r.staffNumber(), null); var s = new StaffMember(); applyStaff(s, r); s.setStatus(StaffStatus.ACTIVE); return map(staffRepo.save(s)); }
-    StaffResponse getStaff(Long id){ return map(reqStaff(id)); }
-    Page<StaffResponse> listStaff(Long schoolId, StaffStatus status, StaffType type, Pageable p){
+    public StaffResponse createStaff(StaffUpsertRequest r, String actor){ ensureStaffUnique(r.schoolId(), r.staffNumber(), null); var s = new StaffMember(); applyStaff(s, r); s.setStatus(StaffStatus.ACTIVE); return map(staffRepo.save(s)); }
+    public StaffResponse getStaff(Long id){ return map(reqStaff(id)); }
+    public Page<StaffResponse> listStaff(Long schoolId, StaffStatus status, StaffType type, Pageable p){
         if(status!=null && type!=null) return staffRepo.findBySchoolIdAndStatusAndStaffType(schoolId,status,type,p).map(this::map);
         if(status!=null) return staffRepo.findBySchoolIdAndStatus(schoolId,status,p).map(this::map);
         if(type!=null) return staffRepo.findBySchoolIdAndStaffType(schoolId,type,p).map(this::map);
         return staffRepo.findBySchoolId(schoolId,p).map(this::map);
     }
-    StaffResponse updateStaff(Long id, StaffUpsertRequest r, String actor){ var s = reqStaff(id); ensureStaffUnique(r.schoolId(), r.staffNumber(), id); applyStaff(s,r); return map(staffRepo.save(s)); }
-    StaffResponse archive(Long id, StaffArchiveRequest r, String actor){ var s=reqStaff(id); if(s.getStatus()==StaffStatus.ARCHIVED) throw new ConflictException("Staff already archived"); s.setStatus(StaffStatus.ARCHIVED); s.setArchivedAt(Instant.now()); s.setArchivedReason(r.reason()); return map(staffRepo.save(s)); }
-    StaffResponse restore(Long id, String actor){ var s=reqStaff(id); if(s.getStatus()!=StaffStatus.ARCHIVED) throw new ConflictException("Staff is not archived"); s.setStatus(StaffStatus.ACTIVE); s.setArchivedAt(null); s.setArchivedReason(null); return map(staffRepo.save(s)); }
+    public StaffResponse updateStaff(Long id, StaffUpsertRequest r, String actor){ var s = reqStaff(id); ensureStaffUnique(r.schoolId(), r.staffNumber(), id); applyStaff(s,r); return map(staffRepo.save(s)); }
+    public StaffResponse archive(Long id, StaffArchiveRequest r, String actor){ var s=reqStaff(id); if(s.getStatus()==StaffStatus.ARCHIVED) throw new ConflictException("Staff already archived"); s.setStatus(StaffStatus.ARCHIVED); s.setArchivedAt(Instant.now()); s.setArchivedReason(r.reason()); return map(staffRepo.save(s)); }
+    public StaffResponse restore(Long id, String actor){ var s=reqStaff(id); if(s.getStatus()!=StaffStatus.ARCHIVED) throw new ConflictException("Staff is not archived"); s.setStatus(StaffStatus.ACTIVE); s.setArchivedAt(null); s.setArchivedReason(null); return map(staffRepo.save(s)); }
 
-    SubjectExperienceResponse addSubjectExperience(Long staffId, SubjectExperienceRequest r, String actor){ var st=reqEducatorInSchool(staffId, r.schoolId()); ensureSchoolReference(r.schoolId(), null, null, r.subjectId()); var e=new EducatorSubjectExperience(); e.setSchoolId(r.schoolId()); e.setStaffId(staffId); e.setSubjectId(r.subjectId()); e.setYearsExperience(r.yearsExperience()); e.setNotes(r.notes()); return map(expRepo.save(e)); }
-    Page<SubjectExperienceResponse> listSubjectExperience(Long schoolId, Long staffId, Pageable p){ return expRepo.findBySchoolIdAndStaffId(schoolId, staffId, p).map(this::map); }
-    void deleteSubjectExperience(Long id){ expRepo.deleteById(id); }
+    public SubjectExperienceResponse addSubjectExperience(Long staffId, SubjectExperienceRequest r, String actor){ var st=reqEducatorInSchool(staffId, r.schoolId()); ensureSchoolReference(r.schoolId(), null, null, r.subjectId()); var e=new EducatorSubjectExperience(); e.setSchoolId(r.schoolId()); e.setStaffId(staffId); e.setSubjectId(r.subjectId()); e.setYearsExperience(r.yearsExperience()); e.setNotes(r.notes()); return map(expRepo.save(e)); }
+    public Page<SubjectExperienceResponse> listSubjectExperience(Long schoolId, Long staffId, Pageable p){ return expRepo.findBySchoolIdAndStaffId(schoolId, staffId, p).map(this::map); }
+    public void deleteSubjectExperience(Long id){ expRepo.deleteById(id); }
 
-    RegisterClassAssignmentResponse assignRegisterClass(RegisterClassAssignRequest r, String actor){ reqEducatorInSchool(r.staffId(), r.schoolId()); ensureSchoolReference(r.schoolId(), r.academicYearId(), r.classRoomId(), null); var a=new RegisterClassAssignment(); a.setSchoolId(r.schoolId()); a.setStaffId(r.staffId()); a.setClassRoomId(r.classRoomId()); a.setAcademicYearId(r.academicYearId()); a.setRole(r.role()); return map(registerRepo.save(a)); }
-    Page<RegisterClassAssignmentResponse> listRegisterClass(Long schoolId, Long yearId, Long classId, Pageable p){ if(yearId!=null && classId!=null) return registerRepo.findBySchoolIdAndAcademicYearIdAndClassRoomId(schoolId,yearId,classId,p).map(this::map); if(yearId!=null) return registerRepo.findBySchoolIdAndAcademicYearId(schoolId,yearId,p).map(this::map); return registerRepo.findBySchoolId(schoolId,p).map(this::map); }
-    void deleteRegisterClass(Long id){ registerRepo.deleteById(id); }
+    public RegisterClassAssignmentResponse assignRegisterClass(RegisterClassAssignRequest r, String actor){ reqEducatorInSchool(r.staffId(), r.schoolId()); ensureSchoolReference(r.schoolId(), r.academicYearId(), r.classRoomId(), null); var a=new RegisterClassAssignment(); a.setSchoolId(r.schoolId()); a.setStaffId(r.staffId()); a.setClassRoomId(r.classRoomId()); a.setAcademicYearId(r.academicYearId()); a.setRole(r.role()); return map(registerRepo.save(a)); }
+    public Page<RegisterClassAssignmentResponse> listRegisterClass(Long schoolId, Long yearId, Long classId, Pageable p){ if(yearId!=null && classId!=null) return registerRepo.findBySchoolIdAndAcademicYearIdAndClassRoomId(schoolId,yearId,classId,p).map(this::map); if(yearId!=null) return registerRepo.findBySchoolIdAndAcademicYearId(schoolId,yearId,p).map(this::map); return registerRepo.findBySchoolId(schoolId,p).map(this::map); }
+    public void deleteRegisterClass(Long id){ registerRepo.deleteById(id); }
 
-    LeaveRequestResponse createLeave(LeaveRequestCreate r, String actor){ if(r.endDate().isBefore(r.startDate())) throw new ConflictException("endDate must be >= startDate"); reqStaffInSchool(r.staffId(), r.schoolId()); var l=new StaffLeaveRequest(); l.setSchoolId(r.schoolId()); l.setStaffId(r.staffId()); l.setLeaveType(r.leaveType()); l.setStartDate(r.startDate()); l.setEndDate(r.endDate()); l.setReason(r.reason()); l.setStatus(LeaveStatus.PENDING); return map(leaveRepo.save(l)); }
-    LeaveRequestResponse getLeave(Long id){ return map(reqLeave(id)); }
-    Page<LeaveRequestResponse> listLeave(Long schoolId, LeaveStatus status, Long staffId, LocalDate from, LocalDate to, Pageable p){ if(from!=null && to!=null) return leaveRepo.findBySchoolIdAndStartDateGreaterThanEqualAndEndDateLessThanEqual(schoolId,from,to,p).map(this::map); if(status!=null && staffId!=null) return leaveRepo.findBySchoolIdAndStatusAndStaffId(schoolId,status,staffId,p).map(this::map); if(status!=null) return leaveRepo.findBySchoolIdAndStatus(schoolId,status,p).map(this::map); if(staffId!=null) return leaveRepo.findBySchoolIdAndStaffId(schoolId,staffId,p).map(this::map); return leaveRepo.findBySchoolId(schoolId,p).map(this::map); }
-    LeaveRequestResponse approveLeave(Long id, LeaveDecisionRequest r, String actor){ return decide(id, LeaveStatus.APPROVED, r, actor); }
-    LeaveRequestResponse rejectLeave(Long id, LeaveDecisionRequest r, String actor){ return decide(id, LeaveStatus.REJECTED, r, actor); }
-    LeaveRequestResponse cancelLeave(Long id, LeaveDecisionRequest r, String actor){ return decide(id, LeaveStatus.CANCELLED, r, actor); }
+    public LeaveRequestResponse createLeave(LeaveRequestCreate r, String actor){ if(r.endDate().isBefore(r.startDate())) throw new ConflictException("endDate must be >= startDate"); reqStaffInSchool(r.staffId(), r.schoolId()); var l=new StaffLeaveRequest(); l.setSchoolId(r.schoolId()); l.setStaffId(r.staffId()); l.setLeaveType(r.leaveType()); l.setStartDate(r.startDate()); l.setEndDate(r.endDate()); l.setReason(r.reason()); l.setStatus(LeaveStatus.PENDING); return map(leaveRepo.save(l)); }
+    public LeaveRequestResponse getLeave(Long id){ return map(reqLeave(id)); }
+    public Page<LeaveRequestResponse> listLeave(Long schoolId, LeaveStatus status, Long staffId, LocalDate from, LocalDate to, Pageable p){ if(from!=null && to!=null) return leaveRepo.findBySchoolIdAndStartDateGreaterThanEqualAndEndDateLessThanEqual(schoolId,from,to,p).map(this::map); if(status!=null && staffId!=null) return leaveRepo.findBySchoolIdAndStatusAndStaffId(schoolId,status,staffId,p).map(this::map); if(status!=null) return leaveRepo.findBySchoolIdAndStatus(schoolId,status,p).map(this::map); if(staffId!=null) return leaveRepo.findBySchoolIdAndStaffId(schoolId,staffId,p).map(this::map); return leaveRepo.findBySchoolId(schoolId,p).map(this::map); }
+    public LeaveRequestResponse approveLeave(Long id, LeaveDecisionRequest r, String actor){ return decide(id, LeaveStatus.APPROVED, r, actor); }
+    public LeaveRequestResponse rejectLeave(Long id, LeaveDecisionRequest r, String actor){ return decide(id, LeaveStatus.REJECTED, r, actor); }
+    public LeaveRequestResponse cancelLeave(Long id, LeaveDecisionRequest r, String actor){ return decide(id, LeaveStatus.CANCELLED, r, actor); }
 
-    List<AttendanceResponse> createAttendance(AttendanceCreateRequest r, String actor){
+    public List<AttendanceResponse> createAttendance(AttendanceCreateRequest r, String actor){
         if(r.records()!=null && !r.records().isEmpty()) return r.records().stream().map(i->createAttendanceRecord(r.schoolId(),r.date(),i.staffId(),i.status(),i.notes(),actor)).toList();
         return List.of(createAttendanceRecord(r.schoolId(),r.date(),r.staffId(),r.status(),r.notes(),actor));
     }
-    Page<AttendanceResponse> attendanceByDate(Long schoolId, LocalDate date, Pageable p){ return attendanceRepo.findBySchoolIdAndDate(schoolId,date,p).map(this::map); }
-    Page<AttendanceResponse> attendanceByStaff(Long schoolId, Long staffId, LocalDate from, LocalDate to, Pageable p){ return attendanceRepo.findBySchoolIdAndStaffIdAndDateBetween(schoolId,staffId,from,to,p).map(this::map); }
+    public Page<AttendanceResponse> attendanceByDate(Long schoolId, LocalDate date, Pageable p){ return attendanceRepo.findBySchoolIdAndDate(schoolId,date,p).map(this::map); }
+    public Page<AttendanceResponse> attendanceByStaff(Long schoolId, Long staffId, LocalDate from, LocalDate to, Pageable p){ return attendanceRepo.findBySchoolIdAndStaffIdAndDateBetween(schoolId,staffId,from,to,p).map(this::map); }
 
-    DashboardSummary dashboard(Long schoolId, LocalDate from, LocalDate to){
+    public DashboardSummary dashboard(Long schoolId, LocalDate from, LocalDate to){
         long totalStaff = staffRepo.findBySchoolId(schoolId, Pageable.unpaged()).getTotalElements();
         long totalAtt = attendanceRepo.countBySchoolIdAndDateBetween(schoolId, from, to);
         long present = attendanceRepo.countBySchoolIdAndDateBetweenAndStatus(schoolId, from, to, StaffAttendanceStatus.PRESENT);
@@ -84,17 +93,17 @@ class HrService {
         return new DashboardSummary(totalStaff, attendanceRate, absent, late, pending, top);
     }
 
-    TrainingProgramResponse createTraining(TrainingProgramUpsertRequest r, String actor){ var t=new TrainingProgram(); applyTraining(t,r); return map(trainingRepo.save(t)); }
-    TrainingProgramResponse getTraining(Long id){ return map(reqTraining(id)); }
-    Page<TrainingProgramResponse> listTraining(Long schoolId, LocalDate from, LocalDate to, Pageable p){ if(from!=null && to!=null) return trainingRepo.findBySchoolIdAndStartDateBetween(schoolId,from,to,p).map(this::map); return trainingRepo.findBySchoolId(schoolId,p).map(this::map); }
-    TrainingProgramResponse updateTraining(Long id, TrainingProgramUpsertRequest r, String actor){ var t=reqTraining(id); applyTraining(t,r); return map(trainingRepo.save(t)); }
-    void deleteTraining(Long id){ trainingRepo.deleteById(id); }
-    List<TrainingAttendanceResponse> addTrainingAttendance(Long programId, TrainingAttendanceBulkRequest r, String actor){ reqTraining(programId); return r.records().stream().map(i->{reqStaff(i.staffId()); var a=new TrainingAttendance(); a.setSchoolId(r.schoolId()); a.setTrainingProgramId(programId); a.setStaffId(i.staffId()); a.setAttended(i.attended()); a.setCertificateUrl(i.certificateUrl()); return map(trainingAttendanceRepo.save(a));}).toList(); }
-    Page<TrainingAttendanceResponse> listTrainingAttendance(Long schoolId, Long programId, Pageable p){ return trainingAttendanceRepo.findBySchoolIdAndTrainingProgramId(schoolId,programId,p).map(this::map); }
+    public TrainingProgramResponse createTraining(TrainingProgramUpsertRequest r, String actor){ var t=new TrainingProgram(); applyTraining(t,r); return map(trainingRepo.save(t)); }
+    public TrainingProgramResponse getTraining(Long id){ return map(reqTraining(id)); }
+    public Page<TrainingProgramResponse> listTraining(Long schoolId, LocalDate from, LocalDate to, Pageable p){ if(from!=null && to!=null) return trainingRepo.findBySchoolIdAndStartDateBetween(schoolId,from,to,p).map(this::map); return trainingRepo.findBySchoolId(schoolId,p).map(this::map); }
+    public TrainingProgramResponse updateTraining(Long id, TrainingProgramUpsertRequest r, String actor){ var t=reqTraining(id); applyTraining(t,r); return map(trainingRepo.save(t)); }
+    public void deleteTraining(Long id){ trainingRepo.deleteById(id); }
+    public List<TrainingAttendanceResponse> addTrainingAttendance(Long programId, TrainingAttendanceBulkRequest r, String actor){ reqTraining(programId); return r.records().stream().map(i->{reqStaff(i.staffId()); var a=new TrainingAttendance(); a.setSchoolId(r.schoolId()); a.setTrainingProgramId(programId); a.setStaffId(i.staffId()); a.setAttended(i.attended()); a.setCertificateUrl(i.certificateUrl()); return map(trainingAttendanceRepo.save(a));}).toList(); }
+    public Page<TrainingAttendanceResponse> listTrainingAttendance(Long schoolId, Long programId, Pageable p){ return trainingAttendanceRepo.findBySchoolIdAndTrainingProgramId(schoolId,programId,p).map(this::map); }
 
-    AppraisalResponse createAppraisal(AppraisalCreateRequest r, String actor){ reqStaff(r.staffId()); var a = new AppraisalRecord(); a.setSchoolId(r.schoolId()); a.setStaffId(r.staffId()); a.setAppraisalDate(r.appraisalDate()); a.setAppraisalType(r.appraisalType()); a.setReviewerName(r.reviewerName()); a.setScore(r.score()); a.setSummary(r.summary()); a.setRecommendations(r.recommendations()); return map(appraisalRepo.save(a)); }
-    AppraisalResponse getAppraisal(Long id){ return map(reqAppraisal(id)); }
-    Page<AppraisalResponse> listAppraisal(Long schoolId, Long staffId, AppraisalType type, LocalDate from, LocalDate to, Pageable p){ if(from!=null && to!=null) return appraisalRepo.findBySchoolIdAndAppraisalDateBetween(schoolId,from,to,p).map(this::map); if(staffId!=null && type!=null) return appraisalRepo.findBySchoolIdAndStaffIdAndAppraisalType(schoolId,staffId,type,p).map(this::map); if(staffId!=null) return appraisalRepo.findBySchoolIdAndStaffId(schoolId,staffId,p).map(this::map); if(type!=null) return appraisalRepo.findBySchoolIdAndAppraisalType(schoolId,type,p).map(this::map); return appraisalRepo.findBySchoolId(schoolId,p).map(this::map); }
+    public AppraisalResponse createAppraisal(AppraisalCreateRequest r, String actor){ reqStaff(r.staffId()); var a = new AppraisalRecord(); a.setSchoolId(r.schoolId()); a.setStaffId(r.staffId()); a.setAppraisalDate(r.appraisalDate()); a.setAppraisalType(r.appraisalType()); a.setReviewerName(r.reviewerName()); a.setScore(r.score()); a.setSummary(r.summary()); a.setRecommendations(r.recommendations()); return map(appraisalRepo.save(a)); }
+    public AppraisalResponse getAppraisal(Long id){ return map(reqAppraisal(id)); }
+    public Page<AppraisalResponse> listAppraisal(Long schoolId, Long staffId, AppraisalType type, LocalDate from, LocalDate to, Pageable p){ if(from!=null && to!=null) return appraisalRepo.findBySchoolIdAndAppraisalDateBetween(schoolId,from,to,p).map(this::map); if(staffId!=null && type!=null) return appraisalRepo.findBySchoolIdAndStaffIdAndAppraisalType(schoolId,staffId,type,p).map(this::map); if(staffId!=null) return appraisalRepo.findBySchoolIdAndStaffId(schoolId,staffId,p).map(this::map); if(type!=null) return appraisalRepo.findBySchoolIdAndAppraisalType(schoolId,type,p).map(this::map); return appraisalRepo.findBySchoolId(schoolId,p).map(this::map); }
 
     private AttendanceResponse createAttendanceRecord(Long schoolId, LocalDate date, Long staffId, StaffAttendanceStatus status, String notes, String actor){
         reqStaffInSchool(staffId, schoolId); if(attendanceRepo.existsBySchoolIdAndStaffIdAndDate(schoolId,staffId,date)) throw new ConflictException("Attendance already captured for staff/date");

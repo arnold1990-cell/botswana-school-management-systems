@@ -9,9 +9,19 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public abstract class AuditableEntity {
 
     @CreatedDate
@@ -30,8 +40,4 @@ public abstract class AuditableEntity {
     @Column(name = "updated_by")
     private String updatedBy;
 
-    public Instant getCreatedAt() { return createdAt; }
-    public Instant getUpdatedAt() { return updatedAt; }
-    public String getCreatedBy() { return createdBy; }
-    public String getUpdatedBy() { return updatedBy; }
 }

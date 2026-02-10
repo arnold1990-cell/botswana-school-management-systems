@@ -2,9 +2,19 @@ package com.bosams.schoolsetup.domain;
 
 import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "schools")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class School extends AuditableEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -26,13 +36,5 @@ public class School extends AuditableEntity {
     private String defaultTermStructure;
     @Column(length = 100)
     private String documentNumberFormat;
-    public Long getId(){return id;} public String getName(){return name;} public void setName(String n){name=n;}
-    public String getAddress(){return address;} public void setAddress(String a){address=a;}
-    public String getContactEmail(){return contactEmail;} public void setContactEmail(String c){contactEmail=c;}
-    public String getContactPhone(){return contactPhone;} public void setContactPhone(String c){contactPhone=c;}
-    public String getLogoUrl(){return logoUrl;} public void setLogoUrl(String l){logoUrl=l;}
-    public String getDocumentHeader(){return documentHeader;} public void setDocumentHeader(String d){documentHeader=d;}
-    public String getReportLanguages(){return reportLanguages;} public void setReportLanguages(String r){reportLanguages=r;}
-    public String getDefaultTermStructure(){return defaultTermStructure;} public void setDefaultTermStructure(String d){defaultTermStructure=d;}
-    public String getDocumentNumberFormat(){return documentNumberFormat;} public void setDocumentNumberFormat(String d){documentNumberFormat=d;}
+
 }

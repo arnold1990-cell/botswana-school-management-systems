@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-@Entity @Table(name="bus_routes")
+@Entity(name="LegacyBusRoute") @Table(name="bus_routes")
 @Getter
 @Setter
 @NoArgsConstructor

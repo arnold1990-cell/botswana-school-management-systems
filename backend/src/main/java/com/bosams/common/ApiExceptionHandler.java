@@ -63,6 +63,11 @@ public class ApiExceptionHandler {
         return baseProblem(HttpStatus.BAD_REQUEST, "Validation failed", request, errors);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        return baseProblem(HttpStatus.BAD_REQUEST, ex.getMessage(), request, List.of());
+    }
+
     private ProblemDetail baseProblem(HttpStatus status, String detail, HttpServletRequest request, List<Map<String, String>> errors) {
         var problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setProperty("errors", errors);

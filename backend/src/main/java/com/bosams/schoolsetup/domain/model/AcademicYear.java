@@ -9,7 +9,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@Entity
+@Entity(name = "AcademicYearModel")
 @Table(name = "academic_year")
 public class AcademicYear extends BaseEntity {
 

@@ -80,6 +80,20 @@ class SchoolSetupIntegrationTest {
     }
 
     @Test
+    void setActiveYearRejectsMismatchedSchool() {
+        var schoolB = rest.postForEntity("/api/v1/school-setup/schools", Map.of("name", "School C"), Map.class);
+        var schoolBId = ((Number) schoolB.getBody().get("id")).longValue();
+        var year = rest.postForEntity("/api/v1/school-setup/academic-years", Map.of("schoolId", schoolBId, "name", "2030"), Map.class);
+        var yearId = ((Number) year.getBody().get("id")).longValue();
+
+        var response = rest.exchange("/api/v1/school-setup/academic-years/{id}/active", HttpMethod.PUT,
+                new HttpEntity<>(Map.of("schoolId", 1)), Map.class, yearId);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).containsKeys("timestamp", "path", "detail");
+    }
+
+    @Test
     void renameGradeToExistingNameReturnsConflict() {
         rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId", 1, "name", "Form-X1"), Map.class);
         var g2 = rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId", 1, "name", "Form-X2"), Map.class);

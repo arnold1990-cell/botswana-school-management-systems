@@ -59,6 +59,21 @@ class LearnerParentIntegrationTest {
         assertThat(dup.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
+
+    @Test void linkParentRejectsCrossSchoolMismatch(){
+        Long learnerId=createLearner("L-7",1L,1L,1L);
+        Long schoolBId=((Number)rest.postForEntity("/api/v1/school-setup/schools",Map.of("name","Other School"),Map.class).getBody().get("id")).longValue();
+        Long parentId=((Number)rest.postForEntity("/api/v1/parents",Map.of("schoolId",schoolBId,"parentNo","P-7","firstName","P","lastName","Q","phone","+267"),Map.class).getBody().get("id")).longValue();
+        var response=rest.postForEntity("/api/v1/learners/"+learnerId+"/parents/link",Map.of("schoolId",1,"parentId",parentId,"relationshipType","AUNT","isPrimaryContact",false,"livesWithLearner",false),Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test void attendanceBulkDuplicateLearnerWithinPayloadReturns409(){
+        Long learnerId=createLearner("L-8",1L,1L,1L);
+        var dup=rest.postForEntity("/api/v1/attendance/learners",Map.of("schoolId",1,"academicYearId",1,"termId",1,"date", LocalDate.now().toString(),"period",2,"records",List.of(Map.of("learnerId",learnerId,"status","PRESENT","capturedBy","t"),Map.of("learnerId",learnerId,"status","ABSENT","capturedBy","t"))),Map.class);
+        assertThat(dup.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
     @Test void disciplineSummaryAggregates(){
         Long learnerId=createLearner("L-4",1L,1L,1L);
         rest.postForEntity("/api/v1/learners/"+learnerId+"/discipline",Map.of("schoolId",1,"entryDate",LocalDate.now().toString(),"entryType","DEMERIT","codeId",1,"points",5),Map.class);

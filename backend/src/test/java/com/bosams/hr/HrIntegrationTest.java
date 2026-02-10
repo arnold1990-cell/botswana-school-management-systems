@@ -66,6 +66,14 @@ class HrIntegrationTest {
         assertThat(rejected.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
+
+    @Test void leaveRequestRejectsSchoolMismatch(){
+        Long schoolB=((Number)rest.postForEntity("/api/v1/school-setup/schools", Map.of("name","School B HR"), Map.class).getBody().get("id")).longValue();
+        Long s = ((Number)rest.postForEntity("/api/v1/hr/staff", Map.of("schoolId",schoolB,"staffNumber","EMP-X","staffType","EDUCATOR","firstName","X","lastName","Y"), Map.class).getBody().get("id")).longValue();
+        var response = rest.postForEntity("/api/v1/hr/leave-requests", Map.of("schoolId",1,"staffId",s,"leaveType","ANNUAL","startDate",LocalDate.now().toString(),"endDate",LocalDate.now().toString(),"reason","trip"), Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
     @Test void dashboardSummaryCounts(){
         Long s1 = createStaff("EMP-7","EDUCATOR"); Long s2 = createStaff("EMP-8","NON_TEACHING");
         var d = LocalDate.now().toString();

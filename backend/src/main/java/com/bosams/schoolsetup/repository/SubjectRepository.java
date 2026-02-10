@@ -1,8 +1,8 @@
 package com.bosams.schoolsetup.repository;
 
-import com.bosams.schoolsetup.domain.model.House;
+import com.bosams.schoolsetup.domain.model.Subject;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface HouseRepository extends JpaRepository<House, UUID> {
+public interface SubjectRepository extends JpaRepository<Subject, UUID> {
 }

@@ -1,5 +1,7 @@
 package com.bosams.learnerparent.domain;
 
+import com.bosams.learnerparent.domain.enums.*;
+
 import com.bosams.common.ConflictException;
 import com.bosams.common.NotFoundException;
 import com.bosams.learnerparent.dto.LearnerParentDtos.*;

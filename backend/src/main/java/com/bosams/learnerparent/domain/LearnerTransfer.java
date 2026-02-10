@@ -1,5 +1,7 @@
 package com.bosams.learnerparent.domain;
 
+import com.bosams.learnerparent.domain.enums.*;
+
 import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
 import java.time.Instant;

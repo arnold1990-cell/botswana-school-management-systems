@@ -2,8 +2,6 @@ package com.bosams.learnerparent.domain;
 
 import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
-import java.time.Instant;
-import java.time.LocalDate;
 
 enum ApplicationStatus { SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, WAITLISTED }
 enum LearnerStatus { ACTIVE, ARCHIVED, TRANSFERRED_OUT }

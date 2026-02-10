@@ -1,6 +1,5 @@
 package com.bosams.learnerparent.domain;
 
-import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.time.LocalDate;

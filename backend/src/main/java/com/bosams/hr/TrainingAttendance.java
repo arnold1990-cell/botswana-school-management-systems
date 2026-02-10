@@ -1,9 +1,6 @@
 package com.bosams.hr;
 
-import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
-import java.time.Instant;
-import java.time.LocalDate;
 
 @Entity @Table(name = "hr_training_attendance", uniqueConstraints = @UniqueConstraint(name = "uq_hr_training_staff", columnNames = {"school_id", "training_program_id", "staff_id"}))
 public class TrainingAttendance extends HrSchoolScopedEntity {

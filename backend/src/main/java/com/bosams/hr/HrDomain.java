@@ -2,8 +2,6 @@ package com.bosams.hr;
 
 import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
-import java.time.Instant;
-import java.time.LocalDate;
 
 enum StaffType { EDUCATOR, NON_TEACHING }
 enum StaffStatus { ACTIVE, ARCHIVED }

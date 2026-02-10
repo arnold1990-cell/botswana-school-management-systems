@@ -1,8 +1,6 @@
 package com.bosams.learnerparent.domain;
 
-import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
-import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity @Table(name="learner_leadership_roles", uniqueConstraints=@UniqueConstraint(name="uq_leadership", columnNames={"school_id","learner_id","role_type","academic_year_id"}))

@@ -1,8 +1,6 @@
 package com.bosams.hr;
 
-import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
-import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity @Table(name = "hr_training_programs")

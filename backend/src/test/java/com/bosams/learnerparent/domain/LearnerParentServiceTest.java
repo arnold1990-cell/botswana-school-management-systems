@@ -14,8 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -98,5 +100,14 @@ class LearnerParentServiceTest {
         service.attendanceByClass(1L, LocalDate.of(2025, 1, 10), 99L, 1, PageRequest.of(0, 10));
 
         verify(attendance, never()).findBySchoolIdAndDateAndPeriodAndLearnerIdIn(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void listLearnersRejectsInvalidStatusValue() {
+        var ex = assertThrows(IllegalArgumentException.class,
+                () -> service.listLearners(1L, "NOT_A_STATUS", null, null, null, Pageable.unpaged()));
+
+        assertTrue(ex.getMessage().contains("LearnerStatus"));
+        verify(learners, never()).findBySchoolId(any(), any());
     }
 }

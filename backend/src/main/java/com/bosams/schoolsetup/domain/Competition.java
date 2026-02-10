@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-@Entity @Table(name="competitions")
+@Entity(name="LegacyCompetition") @Table(name="competitions")
 @Getter
 @Setter
 @NoArgsConstructor

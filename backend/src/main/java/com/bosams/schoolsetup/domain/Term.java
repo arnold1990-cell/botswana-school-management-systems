@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
+@Entity(name="LegacyTerm")
 @Table(name = "terms", uniqueConstraints = @UniqueConstraint(columnNames = {"academic_year_id","name"}))
 @Getter
 @Setter

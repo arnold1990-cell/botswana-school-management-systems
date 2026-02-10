@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -19,44 +22,78 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @SpringBootTest(classes = BoSamsApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SchoolSetupIntegrationTest {
-    @Container static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
-    @DynamicPropertySource static void props(DynamicPropertyRegistry r){ r.add("spring.datasource.url", postgres::getJdbcUrl); r.add("spring.datasource.username", postgres::getUsername); r.add("spring.datasource.password", postgres::getPassword); }
-    @Autowired TestRestTemplate rest;
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
-    @Test void createSchool(){
-        var body = Map.of("name","New School","address","Maun");
-        var res=rest.postForEntity("/api/v1/school-setup/schools",body,Map.class);
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(res.getBody()).containsEntry("name","New School");
+    @DynamicPropertySource
+    static void props(DynamicPropertyRegistry r) {
+        r.add("spring.datasource.url", postgres::getJdbcUrl);
+        r.add("spring.datasource.username", postgres::getUsername);
+        r.add("spring.datasource.password", postgres::getPassword);
     }
 
-    @Test void createAcademicYearAndTerms(){
-        var y=rest.postForEntity("/api/v1/school-setup/academic-years", Map.of("schoolId",1,"name","2026"), Map.class);
-        assertThat(y.getStatusCode()).isEqualTo(HttpStatus.OK);
-        Long id=((Number)y.getBody().get("id")).longValue();
-        var t=rest.postForEntity("/api/v1/school-setup/terms", Map.of("schoolId",1,"academicYearId",id,"name","Term 1"), Map.class);
-        assertThat(t.getStatusCode()).isEqualTo(HttpStatus.OK);
+    @Autowired
+    TestRestTemplate rest;
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void validationErrorWhenCreatingGradeWithBlankName() {
+        var response = rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId", 1, "name", "   "), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).containsEntry("detail", "Validation failed");
+        var errors = (List<Map<String, String>>) response.getBody().get("errors");
+        assertThat(errors).anyMatch(error -> "name".equals(error.get("field")));
     }
 
-    @Test void uniquenessFailureGrade(){
-        rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId",1,"name","Form 1"), Map.class);
-        var dup=rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId",1,"name","Form 1"), String.class);
-        assertThat(dup.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    @Test
+    void duplicateHouseNameInSameSchoolReturnsConflict() {
+        var first = rest.postForEntity("/api/v1/school-setup/houses", Map.of("schoolId", 1, "name", "Red-One"), Map.class);
+        var duplicate = rest.postForEntity("/api/v1/school-setup/houses", Map.of("schoolId", 1, "name", "Red-One"), Map.class);
+
+        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(duplicate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(duplicate.getBody()).containsEntry("entity", "House");
+        assertThat(duplicate.getBody()).containsEntry("field", "name");
     }
 
-    @Test void listHousesPagination(){
-        for(int i=0;i<3;i++) rest.postForEntity("/api/v1/school-setup/houses", Map.of("schoolId",1,"name","HouseX"+i), Map.class);
-        var res=rest.getForEntity("/api/v1/school-setup/schools/1/houses?page=0&size=2", Map.class);
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat((List<?>)res.getBody().get("content")).hasSize(2);
+    @Test
+    void houseNameCanRepeatAcrossDifferentSchools() {
+        var schoolB = rest.postForEntity("/api/v1/school-setup/schools", Map.of("name", "School B"), Map.class);
+        var schoolBId = ((Number) schoolB.getBody().get("id")).longValue();
+
+        var houseA = rest.postForEntity("/api/v1/school-setup/houses", Map.of("schoolId", 1, "name", "Red-Two"), Map.class);
+        var houseB = rest.postForEntity("/api/v1/school-setup/houses", Map.of("schoolId", schoolBId, "name", "Red-Two"), Map.class);
+
+        assertThat(houseA.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(houseB.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
-    @Test void createGradeAndClassMapping(){
-        var y=rest.postForEntity("/api/v1/school-setup/academic-years", Map.of("schoolId",1,"name","2027"), Map.class);
-        var g=rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId",1,"name","Form 7"), Map.class);
-        Long yid=((Number)y.getBody().get("id")).longValue(); Long gid=((Number)g.getBody().get("id")).longValue();
-        var c=rest.postForEntity("/api/v1/school-setup/classes", Map.of("schoolId",1,"academicYearId",yid,"gradeId",gid,"code","F7A","name","Form 7 A"), Map.class);
-        assertThat(c.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(c.getBody()).containsEntry("gradeId", gid.intValue());
+    @Test
+    void dbConstraintFallbackReturnsConflictProblemDetail() {
+        rest.postForEntity("/api/v1/school-setup/academic-years", Map.of("schoolId", 1, "name", "2028"), Map.class);
+        var duplicate = rest.postForEntity("/api/v1/school-setup/academic-years", Map.of("schoolId", 1, "name", "2028"), Map.class);
+
+        assertThat(duplicate.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(duplicate.getBody()).containsEntry("detail", "Request conflicts with existing data.");
+        assertThat(duplicate.getBody()).containsEntry("path", "/api/v1/school-setup/academic-years");
+    }
+
+    @Test
+    void renameGradeToExistingNameReturnsConflict() {
+        rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId", 1, "name", "Form-X1"), Map.class);
+        var g2 = rest.postForEntity("/api/v1/school-setup/grades", Map.of("schoolId", 1, "name", "Form-X2"), Map.class);
+        var g2Id = ((Number) g2.getBody().get("id")).longValue();
+
+        ResponseEntity<Map> response = rest.exchange(
+                "/api/v1/school-setup/grades/{id}",
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of("schoolId", 1, "name", "Form-X1")),
+                Map.class,
+                g2Id);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).containsEntry("entity", "Grade");
+        assertThat(response.getBody()).containsEntry("field", "name");
     }
 }

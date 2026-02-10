@@ -1,4 +1,4 @@
-package com.bosams.hr;
+package com.bosams.hr.entity;
 
 import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;

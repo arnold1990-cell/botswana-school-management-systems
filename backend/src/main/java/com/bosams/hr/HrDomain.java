@@ -4,6 +4,11 @@ import com.bosams.common.AuditableEntity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.time.LocalDate;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 enum StaffType { EDUCATOR, NON_TEACHING }
 enum StaffStatus { ACTIVE, ARCHIVED }
@@ -15,9 +20,13 @@ enum TrainingCategory { INSET, WORKSHOP, COURSE, OTHER }
 enum AppraisalType { APPRAISAL, INTERVIEW }
 
 @MappedSuperclass
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 abstract class HrSchoolScopedEntity extends AuditableEntity {
     @Column(name = "school_id", nullable = false)
     private Long schoolId;
-    public Long getSchoolId() { return schoolId; }
-    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
+
 }

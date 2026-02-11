@@ -1,8 +1,10 @@
 package com.bosams.schoolsetup.repository;
 
-import com.bosams.schoolsetup.domain.model.BusTicketType;
-import java.util.UUID;
+import com.bosams.schoolsetup.domain.BusTicketType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface BusTicketTypeRepository extends JpaRepository<BusTicketType, UUID> {
+public interface BusTicketTypeRepository extends JpaRepository<BusTicketType, Long> {
+    Page<BusTicketType> findBySchoolId(Long schoolId, Pageable pageable);
 }

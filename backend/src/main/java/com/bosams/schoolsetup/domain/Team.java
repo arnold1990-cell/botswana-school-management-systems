@@ -6,7 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-@Entity(name="LegacyTeam") @Table(name="teams")
+@Entity
+@Table(name="teams", uniqueConstraints = @UniqueConstraint(columnNames = {"school_id", "name"}))
 @Getter
 @Setter
 @NoArgsConstructor

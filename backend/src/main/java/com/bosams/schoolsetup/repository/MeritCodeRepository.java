@@ -1,8 +1,10 @@
 package com.bosams.schoolsetup.repository;
 
-import com.bosams.schoolsetup.domain.model.MeritCode;
-import java.util.UUID;
+import com.bosams.schoolsetup.domain.MeritCode;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface MeritCodeRepository extends JpaRepository<MeritCode, UUID> {
+public interface MeritCodeRepository extends JpaRepository<MeritCode, Long> {
+    Page<MeritCode> findBySchoolId(Long schoolId, Pageable pageable);
 }

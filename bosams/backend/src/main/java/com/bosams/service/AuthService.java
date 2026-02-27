@@ -3,6 +3,7 @@ package com.bosams.service;
 import com.bosams.audit.AuditService;
 import com.bosams.auth.JwtService;
 import com.bosams.common.ApiException;
+import com.bosams.domain.Enums;
 import com.bosams.domain.RefreshToken;
 import com.bosams.domain.UserEntity;
 import com.bosams.repository.RefreshTokenRepository;
@@ -10,7 +11,9 @@ import com.bosams.repository.UserRepository;
 import com.bosams.web.dto.LoginResponse;
 import com.bosams.web.dto.RefreshResponse;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,26 +22,33 @@ import java.time.temporal.ChronoUnit;
 @Service
 public class AuthService {
     private final UserRepository users;
-    private final PasswordEncoder encoder;
+    private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokens;
     private final AuditService audit;
 
-    public AuthService(UserRepository users, PasswordEncoder encoder, JwtService jwtService, RefreshTokenRepository refreshTokens, AuditService audit) {
+    public AuthService(UserRepository users,
+                       AuthenticationManager authenticationManager,
+                       JwtService jwtService,
+                       RefreshTokenRepository refreshTokens,
+                       AuditService audit) {
         this.users = users;
-        this.encoder = encoder;
+        this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.refreshTokens = refreshTokens;
         this.audit = audit;
     }
 
     public LoginResponse login(String email, String password) {
-        UserEntity user = users.findByEmail(email)
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", "Invalid email or password"));
-
-        if (!encoder.matches(password, user.getPasswordHash())) {
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+        } catch (AuthenticationException ex) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", "Invalid email or password");
         }
+
+        UserEntity user = users.findByEmail(email)
+                .filter(u -> u.getStatus() == Enums.UserStatus.ACTIVE)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", "Invalid email or password"));
 
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole().name());
         String refreshToken = jwtService.generateRefreshToken(user.getId());

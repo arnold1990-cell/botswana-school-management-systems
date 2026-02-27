@@ -31,7 +31,7 @@ public class AuthController {
         } catch (ApiException ex) {
             if (ex.getStatus() == HttpStatus.UNAUTHORIZED) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Invalid email or password"));
+                        .body(Map.of("message", "Invalid email or password. Please try again."));
             }
             throw ex;
         }

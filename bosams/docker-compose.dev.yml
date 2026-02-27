@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: bosams
+      POSTGRES_USER: bosams
+      POSTGRES_PASSWORD: bosams
+    ports: ["5432:5432"]
+    healthcheck: { test: ["CMD-SHELL","pg_isready -U bosams"], interval: 10s, timeout: 5s, retries: 5 }
+  backend:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/bosams
+      DB_USER: bosams
+      DB_PASSWORD: bosams
+      JWT_SECRET: this-is-a-very-long-secret-for-jwt-signing-please-change
+    ports: ["8080:8080"]
+    depends_on: { postgres: { condition: service_healthy } }
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    volumes: ["./frontend:/app"]
+    environment: { VITE_API_URL: http://localhost:8080/api }
+    ports: ["5173:5173"]
+    depends_on: [backend]

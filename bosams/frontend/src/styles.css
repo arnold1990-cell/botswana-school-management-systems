@@ -1,0 +1,1 @@
+body{font-family:Arial;margin:0} .app{display:flex} aside{width:220px;background:#1c2a3a;color:#fff;min-height:100vh;padding:16px;display:flex;flex-direction:column;gap:8px} aside a{color:#fff;text-decoration:none} main{flex:1;padding:16px} .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.cards div{padding:12px;background:#f0f4f8;border-radius:8px}

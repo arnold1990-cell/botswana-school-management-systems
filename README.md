@@ -1,10 +1,9 @@
 # Botswana School Management Systems
 
-## How to run
+The backend source now lives in:
+
 ```bash
-cd backend
-mvn -q test
-mvn -q spring-boot:run
+bosams/backend
 ```
 
-OpenAPI UI: `http://localhost:8080/swagger-ui.html`
+To run the full application, follow the instructions in `bosams/README.md`.

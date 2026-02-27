@@ -21,6 +21,7 @@ import java.time.temporal.ChronoUnit;
 
 @Service
 public class AuthService {
+    private static final String INVALID_LOGIN_MESSAGE = "Invalid email or password. Please try again.";
     private final UserRepository users;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -43,12 +44,12 @@ public class AuthService {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
         } catch (AuthenticationException ex) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", "Invalid email or password");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", INVALID_LOGIN_MESSAGE);
         }
 
         UserEntity user = users.findByEmail(email)
                 .filter(u -> u.getStatus() == Enums.UserStatus.ACTIVE)
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", "Invalid email or password"));
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", INVALID_LOGIN_MESSAGE));
 
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole().name());
         String refreshToken = jwtService.generateRefreshToken(user.getId());

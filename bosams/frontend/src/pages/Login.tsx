@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import http, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/http';
 
@@ -23,7 +24,12 @@ export const Login = () => {
       if (import.meta.env.DEV) {
         console.error('Login failed', err);
       }
-      setError('Invalid email or password. Please try again.');
+      const fallbackMessage = 'Invalid email or password. Please try again.';
+      const apiMessage =
+        err instanceof AxiosError && typeof err.response?.data?.message === 'string'
+          ? err.response.data.message
+          : null;
+      setError(apiMessage ?? fallbackMessage);
     } finally {
       setLoading(false);
     }

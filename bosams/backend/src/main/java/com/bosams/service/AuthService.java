@@ -12,12 +12,13 @@ import com.bosams.web.dto.LoginResponse;
 import com.bosams.web.dto.RefreshResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -48,8 +49,11 @@ public class AuthService {
         }
 
         UserEntity user = users.findByEmail(email)
-                .filter(u -> u.getStatus() == Enums.UserStatus.ACTIVE)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", INVALID_LOGIN_MESSAGE));
+
+        if (user.getStatus() != Enums.UserStatus.ACTIVE) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_LOGIN", INVALID_LOGIN_MESSAGE);
+        }
 
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole().name());
         String refreshToken = jwtService.generateRefreshToken(user.getId());
@@ -60,7 +64,7 @@ public class AuthService {
         rt.setExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS));
         refreshTokens.save(rt);
 
-        audit.log(user.getId(), "LOGIN", "auth", String.valueOf(user.getId()), null);
+        audit.log(user.getId(), "LOGIN", "auth", user.getId().toString(), null);
 
         return new LoginResponse(
                 accessToken,
@@ -72,14 +76,31 @@ public class AuthService {
     }
 
     public RefreshResponse refresh(String refreshToken) {
-        RefreshToken token = refreshTokens.findByTokenAndRevokedFalse(refreshToken)
+        RefreshToken persistedToken = refreshTokens.findByTokenAndRevokedFalse(refreshToken)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid refresh token"));
 
-        if (token.getExpiresAt().isBefore(Instant.now())) {
+        if (persistedToken.getExpiresAt().isBefore(Instant.now())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "EXPIRED_TOKEN", "Refresh token expired");
         }
 
-        UserEntity user = token.getUser();
+        UUID userId;
+        try {
+            userId = UUID.fromString(jwtService.parse(refreshToken).getSubject());
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid refresh token");
+        }
+
+        UserEntity user = users.findById(userId)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid refresh token"));
+
+        if (user.getStatus() != Enums.UserStatus.ACTIVE) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "User is inactive");
+        }
+
+        if (!persistedToken.getUser().getId().equals(userId)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_TOKEN", "Invalid refresh token");
+        }
+
         return new RefreshResponse(
                 jwtService.generateAccessToken(user.getId(), user.getRole().name()),
                 "Bearer",
@@ -88,10 +109,13 @@ public class AuthService {
     }
 
     public void logout(UserEntity actor, String refreshToken) {
+        // With stateless JWT access tokens, logout is effectively a client-side no-op unless
+        // refresh tokens are persisted and revoked (or blacklisted). This implementation revokes
+        // stored refresh tokens when present.
         refreshTokens.findByTokenAndRevokedFalse(refreshToken).ifPresent(t -> {
             t.setRevoked(true);
             refreshTokens.save(t);
         });
-        audit.log(actor.getId(), "LOGOUT", "auth", String.valueOf(actor.getId()), null);
+        audit.log(actor.getId(), "LOGOUT", "auth", actor.getId().toString(), null);
     }
 }

@@ -1,23 +1,30 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from '../auth/AuthContext';
-import { Layout } from '../components/Layout';
-import { DashboardPage, LoginPage, AcademicsPage, ExamsPage, ReportsPage, TeachersPage } from '../pages/Pages';
+import { AuthProvider } from '../auth/AuthContext';
+import { AppLayout } from '../layout/AppLayout';
+import { Login } from '../pages/Login';
+import { DashboardPage, ExamsPage, GradebookPage, ReportsPage, TeachersPage } from '../pages/Pages';
+import { ProtectedRoute } from '../routes/ProtectedRoute';
 
-const Guard = ({children,roles}:{children:JSX.Element,roles?:string[]})=>{
-  const {user, loading}=useAuth();
-  if (loading) return <div>Loading...</div>;
-  if(!user) return <Navigate to='/login'/>;
-  if(roles && !roles.includes(user.role)) return <div>Not authorized</div>;
-  return children;
+export const AppRouter = () => {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path='/login' element={<Login />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path='/' element={<AppLayout />}>
+            <Route index element={<Navigate to='/dashboard' replace />} />
+            <Route path='dashboard' element={<DashboardPage />} />
+            <Route path='gradebook' element={<GradebookPage />} />
+            <Route path='exams' element={<ExamsPage />} />
+            <Route path='reports' element={<ReportsPage />} />
+            <Route path='teachers' element={<TeachersPage />} />
+            <Route path='*' element={<Navigate to='/dashboard' replace />} />
+          </Route>
+        </Route>
+
+        <Route path='*' element={<Navigate to='/dashboard' replace />} />
+      </Routes>
+    </AuthProvider>
+  );
 };
-
-export const AppRouter = ()=> <AuthProvider><Routes>
-  <Route path='/login' element={<LoginPage/>}/>
-  <Route path='/' element={<Guard><Layout/></Guard>}>
-    <Route index element={<DashboardPage/>}/>
-    <Route path='academics' element={<AcademicsPage/>}/>
-    <Route path='exams' element={<ExamsPage/>}/>
-    <Route path='reports' element={<ReportsPage/>}/>
-    <Route path='teachers' element={<Guard roles={['ADMIN','PRINCIPAL']}><TeachersPage/></Guard>}/>
-  </Route>
-</Routes></AuthProvider>;

@@ -42,4 +42,14 @@ public class MarkEntryEntity {
 
     @Column(name = "recorded_by_user_id")
     private UUID recordedByUserId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private Enums.MarkEntryStatus status = Enums.MarkEntryStatus.DRAFT;
+
+    @Column(name = "submitted_at")
+    private Instant submittedAt;
+
+    @Column(name = "submitted_by_user_id")
+    private UUID submittedByUserId;
 }

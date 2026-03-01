@@ -21,38 +21,22 @@ public class AuthorizationService {
         this.assignmentRepository = assignmentRepository;
     }
 
-    public boolean isAdmin(UserEntity u) {
-        return u.getRole() == Enums.Role.ADMIN;
-    }
-
-    public boolean isPrincipal(UserEntity u) {
-        return u.getRole() == Enums.Role.PRINCIPAL;
-    }
-
-    public boolean isTeacher(UserEntity u) {
-        return u.getRole() == Enums.Role.TEACHER;
-    }
+    public boolean isAdmin(UserEntity u) { return u.getRole() == Enums.Role.ADMIN; }
+    public boolean isPrincipal(UserEntity u) { return u.getRole() == Enums.Role.PRINCIPAL; }
+    public boolean isTeacher(UserEntity u) { return u.getRole() == Enums.Role.TEACHER; }
 
     public AcademicYear getActiveAcademicYear() {
         return yearRepository.findByActiveTrue().orElseThrow(() -> new ApiException(HttpStatus.CONFLICT, "NO_ACTIVE_YEAR", "No active academic year"));
     }
 
-    public boolean teacherHasAssignment(UUID userId, Long activeYearId, Long streamId, Long subjectId) {
-        return assignmentRepository.existsByTeacherIdAndAcademicYearIdAndStreamIdAndSubjectIdAndActiveTrue(userId, activeYearId, streamId, subjectId);
+    public boolean teacherHasAssignment(UUID userId, Long activeYearId, Integer gradeLevel, Long subjectId) {
+        return assignmentRepository.existsByTeacherIdAndAcademicYearIdAndGradeLevelAndSubjectIdAndActiveTrue(userId, activeYearId, gradeLevel, subjectId);
     }
 
-    public Set<Long> teacherStreamIds(UUID userId, Long activeYearId) {
+    public Set<Integer> teacherGradeLevels(UUID userId, Long activeYearId) {
         return assignmentRepository.findByTeacherIdAndAcademicYearIdAndActiveTrue(userId, activeYearId)
                 .stream()
-                .map(a -> a.getStream().getId())
-                .collect(Collectors.toSet());
-    }
-
-    public Set<Long> teacherSubjectIdsForStream(UUID userId, Long activeYearId, Long streamId) {
-        return assignmentRepository.findByTeacherIdAndAcademicYearIdAndActiveTrue(userId, activeYearId)
-                .stream()
-                .filter(a -> a.getStream().getId().equals(streamId))
-                .map(a -> a.getSubject().getId())
+                .map(TeacherAssignment::getGradeLevel)
                 .collect(Collectors.toSet());
     }
 }

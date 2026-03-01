@@ -9,4 +9,5 @@ public class Enums {
     public enum MarkResult { PASS, FAIL, ABSENT }
     public enum AssessmentType { CAT, EXAM }
     public enum GradeLetter { A, B, C, D, E, F }
+    public enum MarkEntryStatus { DRAFT, SUBMITTED }
 }

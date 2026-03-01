@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
 type AcademicYear = { year: number };
 type Term = { id: number; termNo: number };
@@ -10,6 +11,7 @@ type Learner = { id: number; admissionNo: string; firstName: string; lastName: s
 const gradeOf = (score: number) => score >= 40 ? 'A' : score >= 35 ? 'B' : score >= 30 ? 'C' : score >= 25 ? 'D' : score >= 20 ? 'E' : 'F';
 
 export const MarksEntryPage = () => {
+  const { user } = useAuth();
   const [year, setYear] = useState<number>();
   const [terms, setTerms] = useState<Term[]>([]);
   const [termId, setTermId] = useState<number>();
@@ -20,6 +22,7 @@ export const MarksEntryPage = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [learners, setLearners] = useState<Learner[]>([]);
   const [scores, setScores] = useState<Record<number, number>>({});
+  const [status, setStatus] = useState<'DRAFT' | 'SUBMITTED'>('DRAFT');
 
   useEffect(() => { (async () => {
     const yr: AcademicYear = (await api.get('/academic-years/current')).data;
@@ -31,6 +34,10 @@ export const MarksEntryPage = () => {
 
   useEffect(() => { if (!termId) return; api.get('/tasks', { params: { termId } }).then((r)=>{ setTasks(r.data); setTaskId(r.data[0]?.id); }); }, [termId]);
   useEffect(() => { api.get('/learners', { params: { gradeLevel } }).then((r)=>setLearners(r.data)); }, [gradeLevel]);
+  useEffect(() => {
+    if (!subjectId || !taskId) return;
+    api.get('/marks/status', { params: { subjectId, taskId, gradeLevel } }).then((r) => setStatus(r.data.status));
+  }, [subjectId, taskId, gradeLevel]);
 
   const rows = useMemo(()=>learners.map(l => ({...l, score: scores[l.id] ?? 0})), [learners, scores]);
 
@@ -38,10 +45,26 @@ export const MarksEntryPage = () => {
     if (!subjectId || !taskId) return;
     await api.post('/marks/bulk', { subjectId, taskId, marks: rows.map(r => ({ learnerId: r.id, score: Number(r.score) })) });
     alert('Marks saved successfully');
+    setStatus('DRAFT');
   };
+
+  const submit = async () => {
+    if (!subjectId || !taskId) return;
+    await api.post('/teacher/marks/submit', null, { params: { subjectId, taskId, gradeLevel } });
+    setStatus('SUBMITTED');
+  };
+
+  const unlock = async () => {
+    if (!subjectId || !taskId) return;
+    await api.post('/admin/marks/unlock', null, { params: { subjectId, taskId, gradeLevel } });
+    setStatus('DRAFT');
+  };
+
+  const locked = status === 'SUBMITTED';
 
   return <section>
     <h2>Marks Entry</h2>
+    {locked && <p>Submitted/Locked</p>}
     <article className='card form-grid'>
       <label>Year <input value={year ?? ''} disabled /></label>
       <label>Term <select value={termId} onChange={(e)=>setTermId(Number(e.target.value))}>{terms.map(t => <option key={t.id} value={t.id}>Term {t.termNo}</option>)}</select></label>
@@ -51,9 +74,11 @@ export const MarksEntryPage = () => {
     </article>
     <article className='card'>
       <table className='table'><thead><tr><th>Learner</th><th>Mark /50</th><th>Grade</th></tr></thead>
-        <tbody>{rows.map(r => <tr key={r.id}><td>{r.admissionNo} - {r.firstName} {r.lastName}</td><td><input type='number' min={0} max={50} value={r.score} onChange={(e)=>setScores({...scores, [r.id]: Number(e.target.value)})} /></td><td>{gradeOf(Number(r.score))}</td></tr>)}</tbody>
+        <tbody>{rows.map(r => <tr key={r.id}><td>{r.admissionNo} - {r.firstName} {r.lastName}</td><td><input disabled={locked} type='number' min={0} max={50} value={r.score} onChange={(e)=>setScores({...scores, [r.id]: Number(e.target.value)})} /></td><td>{gradeOf(Number(r.score))}</td></tr>)}</tbody>
       </table>
-      <button className='btn btn-primary' onClick={save}>Save</button>
+      <button className='btn btn-primary' disabled={locked} onClick={save}>Save Draft</button>
+      {user?.role === 'TEACHER' && <button className='btn btn-secondary' disabled={locked} onClick={submit}>Submit</button>}
+      {(user?.role === 'ADMIN' || user?.role === 'PRINCIPAL') && locked && <button className='btn btn-secondary' onClick={unlock}>Unlock</button>}
     </article>
   </section>;
 };

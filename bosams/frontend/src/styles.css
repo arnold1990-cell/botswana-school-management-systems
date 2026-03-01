@@ -268,3 +268,27 @@ input {
     flex-direction: column;
   }
 }
+
+.form-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+input,
+select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 0.92rem;
+  background: white;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}

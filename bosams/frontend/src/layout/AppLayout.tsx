@@ -8,14 +8,15 @@ export const AppLayout = () => {
   const navItems = user?.role === 'TEACHER'
     ? [
         { to: '/teacher/dashboard', label: 'Teacher Dashboard' },
-        { to: '/gradebook', label: 'Gradebook' },
-        { to: '/exams', label: 'Exams' },
+        { to: '/subjects', label: 'Subjects' },
+        { to: '/marks-entry', label: 'Marks Entry' },
         { to: '/reports', label: 'Reports' },
       ]
     : [
         { to: '/dashboard', label: 'Dashboard' },
-        { to: '/gradebook', label: 'Gradebook' },
-        { to: '/exams', label: 'Exams' },
+        { to: '/learners', label: 'Learners' },
+        { to: '/subjects', label: 'Subjects' },
+        { to: '/marks-entry', label: 'Marks Entry' },
         { to: '/reports', label: 'Reports' },
         { to: '/teachers', label: 'Teachers' },
       ];
@@ -34,11 +35,7 @@ export const AppLayout = () => {
         </div>
         <nav className='app-nav'>
           {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}
-            >
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>
               {item.label}
             </NavLink>
           ))}
@@ -53,9 +50,7 @@ export const AppLayout = () => {
           </div>
           <div className='topbar-user'>
             <span>{user?.fullName ?? 'School Admin'}</span>
-            <button className='btn btn-secondary' type='button' onClick={onLogout}>
-              Logout
-            </button>
+            <button className='btn btn-secondary' type='button' onClick={onLogout}>Logout</button>
           </div>
         </header>
 

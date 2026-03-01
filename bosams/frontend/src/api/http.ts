@@ -3,15 +3,25 @@ import axios from 'axios';
 export const ACCESS_TOKEN_KEY = 'bosams_access_token';
 export const REFRESH_TOKEN_KEY = 'bosams_refresh_token';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+const clearAuthAndRedirect = () => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  window.location.href = '/login';
+};
+
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: API_BASE_URL,
 });
 
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
@@ -25,22 +35,20 @@ http.interceptors.response.use(
     }
 
     if (originalRequest?.url?.includes('/auth/refresh')) {
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      window.location.href = '/login';
+      clearAuthAndRedirect();
       throw error;
     }
 
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
     if (!refreshToken) {
-      window.location.href = '/login';
+      clearAuthAndRedirect();
       throw error;
     }
 
     originalRequest._retry = true;
 
     try {
-      const refreshResponse = await axios.post(`${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`, {
+      const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, {
         refreshToken,
       });
 
@@ -51,9 +59,7 @@ http.interceptors.response.use(
 
       return http(originalRequest);
     } catch (refreshError) {
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      window.location.href = '/login';
+      clearAuthAndRedirect();
       throw refreshError;
     }
   }

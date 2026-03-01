@@ -1,8 +1,9 @@
 import { FormEvent, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
-export const LoginPage=()=>{ const {login}=useAuth(); const [email,setEmail]=useState('admin@bosams.local'); const [password,setPassword]=useState('password');
- const submit=async(e:FormEvent)=>{e.preventDefault(); await login(email,password); window.location.href='/';};
+export const LoginPage=()=>{ const {login}=useAuth(); const navigate = useNavigate(); const [email,setEmail]=useState('admin@bosams.local'); const [password,setPassword]=useState('password');
+ const submit=async(e:FormEvent)=>{e.preventDefault(); await login(email,password); navigate('/');};
  return <form onSubmit={submit}><h1>Bosams Web</h1><input value={email} onChange={e=>setEmail(e.target.value)}/><input type='password' value={password} onChange={e=>setPassword(e.target.value)}/><button>Login</button></form> }
 export const DashboardPage=()=> <div><h2>Dashboard</h2><div className='cards'><div>Calendar</div><div>Leaves (placeholder)</div><div>My Profile</div><div>News</div></div></div>;
 export const AcademicsPage=()=> <div><h2>Manage Gradebook</h2><p>Standards, Streams, Subjects, Students tables and forms.</p></div>;

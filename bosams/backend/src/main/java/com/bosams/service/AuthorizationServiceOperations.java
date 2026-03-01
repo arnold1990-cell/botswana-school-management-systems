@@ -3,6 +3,7 @@ package com.bosams.service;
 import com.bosams.domain.AcademicYear;
 import com.bosams.domain.UserEntity;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -19,7 +20,7 @@ public interface AuthorizationServiceOperations {
 
     Set<Integer> teacherGradeLevels(UUID userId, Long activeYearId);
 
-    Set<Long> teacherStreamIds(UUID teacherUserId, Long academicYearId);
+    List<Long> teacherStreamIds(UUID teacherUserId, Long academicYearId);
 
-    Set<Long> teacherSubjectIdsForStream(UUID teacherUserId, Long academicYearId, Long streamId);
+    List<Long> teacherSubjectIdsForStream(UUID teacherUserId, Long academicYearId, Long streamId);
 }

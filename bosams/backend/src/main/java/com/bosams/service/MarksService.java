@@ -14,8 +14,8 @@ import java.util.*;
 
 @Service
 public class MarksService {
-    private final ExamScheduleRepository schedules; private final MarkRepository marks; private final StudentRepository students; private final AuthorizationService authz; private final GradeProfileRepository gradeProfiles; private final AuditService audit;
-    public MarksService(ExamScheduleRepository schedules, MarkRepository marks, StudentRepository students, AuthorizationService authz, GradeProfileRepository gradeProfiles, AuditService audit) {this.schedules=schedules;this.marks=marks;this.students=students;this.authz=authz;this.gradeProfiles=gradeProfiles;this.audit=audit;}
+    private final ExamScheduleRepository schedules; private final MarkRepository marks; private final StudentRepository students; private final AuthorizationService auth; private final GradeProfileRepository gradeProfiles; private final AuditService audit;
+    public MarksService(ExamScheduleRepository schedules, MarkRepository marks, StudentRepository students, AuthorizationService auth, GradeProfileRepository gradeProfiles, AuditService audit) {this.schedules=schedules;this.marks=marks;this.students=students;this.auth=auth;this.gradeProfiles=gradeProfiles;this.audit=audit;}
 
     public List<MarkEntity> entry(UserEntity actor, Long scheduleId){
         ExamSchedule s = getSched(scheduleId); enforceScheduleAccess(actor, s);
@@ -37,16 +37,16 @@ public class MarksService {
     public void submit(UserEntity actor, Long scheduleId, String overrideReason){
         ExamSchedule s = getSched(scheduleId); enforceScheduleAccess(actor, s);
         boolean afterDeadline = LocalDate.now().isAfter(s.getMarkEntryLastDate());
-        if (authz.isTeacher(actor) && afterDeadline) throw new ApiException(HttpStatus.FORBIDDEN,"DEADLINE_PASSED","Deadline passed");
-        if ((authz.isAdmin(actor)||authz.isPrincipal(actor)) && afterDeadline && (overrideReason==null || overrideReason.isBlank())) throw new ApiException(HttpStatus.CONFLICT,"OVERRIDE_REASON_REQUIRED","overrideReason is required");
+        if (auth.isTeacher(actor) && afterDeadline) throw new ApiException(HttpStatus.FORBIDDEN,"DEADLINE_PASSED","Deadline passed");
+        if ((auth.isAdmin(actor)||auth.isPrincipal(actor)) && afterDeadline && (overrideReason==null || overrideReason.isBlank())) throw new ApiException(HttpStatus.CONFLICT,"OVERRIDE_REASON_REQUIRED","overrideReason is required");
         List<MarkEntity> all = marks.findByExamScheduleId(scheduleId);
         all.forEach(m->{m.setLocked(true);m.setLockedAt(Instant.now());}); marks.saveAll(all);
         audit.log(actor.getId(),"MARKS_SUBMIT","mark",String.valueOf(scheduleId),overrideReason);
     }
 
     private void enforceScheduleAccess(UserEntity actor, ExamSchedule s){
-        if (authz.isTeacher(actor)) {
-            AcademicYear active = authz.getActiveAcademicYear();
+        if (auth.isTeacher(actor)) {
+            AcademicYear active = auth.getActiveAcademicYear();
             if (!s.getExamGroup().getAcademicYear().getId().equals(active.getId())) throw new ApiException(HttpStatus.FORBIDDEN,"NON_ACTIVE_YEAR","Teachers can only access active year");
             Integer gradeLevel = null;
             if (s.getStream() != null && s.getStream().getStandard() != null) {
@@ -55,7 +55,7 @@ public class MarksService {
                     gradeLevel = Integer.parseInt(digits);
                 }
             }
-            if (gradeLevel == null || !authz.teacherHasAssignment(actor.getId(), active.getId(), gradeLevel, s.getSubject().getId())) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Teacher not assigned");
+            if (gradeLevel == null || !auth.teacherHasAssignment(actor.getId(), active.getId(), gradeLevel, s.getSubject().getId())) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Teacher not assigned");
         }
     }
     private ExamSchedule getSched(Long id){ return schedules.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","Schedule not found")); }

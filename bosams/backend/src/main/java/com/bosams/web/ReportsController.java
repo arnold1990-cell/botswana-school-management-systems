@@ -12,8 +12,8 @@ import java.util.*;
 
 @RestController @RequestMapping("/api/reports")
 public class ReportsController {
-    private final StudentRepository students; private final ExamScheduleRepository schedules; private final MarkRepository marks; private final AuthorizationService authz;
-    public ReportsController(StudentRepository students, ExamScheduleRepository schedules, MarkRepository marks, AuthorizationService authz) {this.students=students;this.schedules=schedules;this.marks=marks;this.authz=authz;}
+    private final StudentRepository students; private final ExamScheduleRepository schedules; private final MarkRepository marks; private final AuthorizationService auth;
+    public ReportsController(StudentRepository students, ExamScheduleRepository schedules, MarkRepository marks, AuthorizationService auth) {this.students=students;this.schedules=schedules;this.marks=marks;this.auth=auth;}
 
     @GetMapping("/student")
     public Map<String,Object> student(@AuthenticationPrincipal UserEntity me, @RequestParam Long studentId, @RequestParam Long examGroupId){
@@ -30,7 +30,7 @@ public class ReportsController {
     @GetMapping("/consolidated")
     public List<MarkEntity> consolidated(@AuthenticationPrincipal UserEntity me,@RequestParam Long streamId,@RequestParam Long examGroupId,@RequestParam(defaultValue = "true") boolean rank){
         enforceTeacherStream(me, streamId);
-        Set<Long> allowedSubjects = me.getRole()==Enums.Role.TEACHER ? authz.teacherSubjectIdsForStream(me.getId(), authz.getActiveAcademicYear().getId(), streamId) : Set.of();
+        List<Long> allowedSubjects = me.getRole()==Enums.Role.TEACHER ? auth.teacherSubjectIdsForStream(me.getId(), auth.getActiveAcademicYear().getId(), streamId) : List.of();
         return marks.findAll().stream().filter(m->m.getExamSchedule().getExamGroup().getId().equals(examGroupId) && m.getExamSchedule().getStream().getId().equals(streamId) && (me.getRole()!=Enums.Role.TEACHER || allowedSubjects.contains(m.getExamSchedule().getSubject().getId()))).toList();
     }
 
@@ -42,6 +42,6 @@ public class ReportsController {
     public ResponseEntity<byte[]> consolidatedPdf(@AuthenticationPrincipal UserEntity me,@RequestParam Long streamId,@RequestParam Long examGroupId){ consolidated(me,streamId,examGroupId,true); return pdf("Consolidated report"); }
 
     private ResponseEntity<byte[]> pdf(String title){ return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=report.pdf").body(("%PDF-1.4\n"+title).getBytes(StandardCharsets.UTF_8)); }
-    private void enforceTeacherStream(UserEntity me, Long streamId){ if(me.getRole()==Enums.Role.TEACHER){ AcademicYear ay=authz.getActiveAcademicYear(); if(!authz.teacherStreamIds(me.getId(), ay.getId()).contains(streamId)) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Not assigned stream"); }}
-    private void enforceTeacherSubject(UserEntity me, Long streamId, Long subjectId){ enforceTeacherStream(me,streamId); if(me.getRole()==Enums.Role.TEACHER){ AcademicYear ay=authz.getActiveAcademicYear(); if(!authz.teacherSubjectIdsForStream(me.getId(), ay.getId(), streamId).contains(subjectId)) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Not assigned subject"); }}
+    private void enforceTeacherStream(UserEntity me, Long streamId){ if(me.getRole()==Enums.Role.TEACHER){ AcademicYear ay=auth.getActiveAcademicYear(); if(!auth.teacherStreamIds(me.getId(), ay.getId()).contains(streamId)) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Not assigned stream"); }}
+    private void enforceTeacherSubject(UserEntity me, Long streamId, Long subjectId){ enforceTeacherStream(me,streamId); if(me.getRole()==Enums.Role.TEACHER){ AcademicYear ay=auth.getActiveAcademicYear(); if(!auth.teacherSubjectIdsForStream(me.getId(), ay.getId(), streamId).contains(subjectId)) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Not assigned subject"); }}
 }

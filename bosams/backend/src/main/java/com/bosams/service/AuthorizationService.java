@@ -7,6 +7,7 @@ import com.bosams.repository.TeacherAssignmentRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -49,18 +50,18 @@ public class AuthorizationService implements AuthorizationServiceOperations {
     }
 
     @Override
-    public Set<Long> teacherStreamIds(UUID teacherUserId, Long academicYearId) {
+    public List<Long> teacherStreamIds(UUID teacherUserId, Long academicYearId) {
         if (teacherUserId == null || academicYearId == null) {
-            return Set.of();
+            return List.of();
         }
-        return assignmentRepository.teacherStreamIds(teacherUserId, academicYearId);
+        return assignmentRepository.teacherStreamIds(teacherUserId, academicYearId).stream().toList();
     }
 
     @Override
-    public Set<Long> teacherSubjectIdsForStream(UUID teacherUserId, Long academicYearId, Long streamId) {
+    public List<Long> teacherSubjectIdsForStream(UUID teacherUserId, Long academicYearId, Long streamId) {
         if (teacherUserId == null || academicYearId == null || streamId == null) {
-            return Set.of();
+            return List.of();
         }
-        return assignmentRepository.teacherSubjectIdsForStream(teacherUserId, academicYearId, streamId);
+        return assignmentRepository.teacherSubjectIdsForStream(teacherUserId, academicYearId, streamId).stream().toList();
     }
 }

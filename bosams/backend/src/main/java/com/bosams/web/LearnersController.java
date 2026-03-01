@@ -22,11 +22,11 @@ import java.util.Set;
 @RequestMapping("/api/learners")
 public class LearnersController {
     private final StudentRepository learners;
-    private final AuthorizationService authz;
+    private final AuthorizationService auth;
 
-    public LearnersController(StudentRepository learners, AuthorizationService authz) {
+    public LearnersController(StudentRepository learners, AuthorizationService auth) {
         this.learners = learners;
-        this.authz = authz;
+        this.auth = auth;
     }
 
     @PostMapping
@@ -57,9 +57,9 @@ public class LearnersController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
     public List<StudentEntity> list(@AuthenticationPrincipal UserEntity user, @RequestParam(required = false) Integer gradeLevel) {
-        if (authz.isTeacher(user)) {
-            Long activeYearId = authz.getActiveAcademicYear().getId();
-            Set<Integer> assignedGrades = authz.teacherGradeLevels(user.getId(), activeYearId);
+        if (auth.isTeacher(user)) {
+            Long activeYearId = auth.getActiveAcademicYear().getId();
+            Set<Integer> assignedGrades = auth.teacherGradeLevels(user.getId(), activeYearId);
             if (assignedGrades.isEmpty()) {
                 return List.of();
             }

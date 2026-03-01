@@ -2,7 +2,7 @@ INSERT INTO users (id, email, password_hash, full_name, role, status, created_at
 SELECT
     gen_random_uuid(),
     'admin@bosams.local',
-    crypt('Admin@12345', gen_salt('bf')),
+    crypt('password', gen_salt('bf')),
     'System Admin',
     'ADMIN',
     'ACTIVE',

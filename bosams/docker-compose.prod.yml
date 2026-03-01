@@ -3,6 +3,11 @@ services:
     image: postgres:16
     environment: { POSTGRES_DB: bosams, POSTGRES_USER: bosams, POSTGRES_PASSWORD: bosams }
     volumes: ["pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bosams"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   backend:
     build: ./backend
     environment:
@@ -10,9 +15,14 @@ services:
       DB_USER: bosams
       DB_PASSWORD: bosams
       JWT_SECRET: ${JWT_SECRET}
-    depends_on: [postgres]
+    depends_on:
+      postgres:
+        condition: service_healthy
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
   nginx:
     image: nginx:1.27-alpine
     volumes: ["./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro"]

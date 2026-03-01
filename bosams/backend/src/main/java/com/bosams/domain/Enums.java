@@ -7,4 +7,6 @@ public class Enums {
     public enum EntityStatus { ACTIVE, INACTIVE }
     public enum ExamStatus { ACTIVE, INACTIVE }
     public enum MarkResult { PASS, FAIL, ABSENT }
+    public enum AssessmentType { CAT, EXAM }
+    public enum GradeLetter { A, B, C, D, E, F }
 }

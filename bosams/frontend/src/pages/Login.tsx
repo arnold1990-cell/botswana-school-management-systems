@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
-import http, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/http';
+import { useAuth } from '../auth/AuthContext';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,12 +9,16 @@ export const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login, user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (localStorage.getItem(ACCESS_TOKEN_KEY)) {
-      navigate('/dashboard', { replace: true });
+    if (authLoading || !user) {
+      return;
     }
-  }, [navigate]);
+
+    const targetRoute = user.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard';
+    navigate(targetRoute, { replace: true });
+  }, [authLoading, navigate, user]);
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -22,10 +26,9 @@ export const Login = () => {
     setError('');
 
     try {
-      const response = await http.post('/auth/login', { email, password });
-      localStorage.setItem(ACCESS_TOKEN_KEY, response.data.accessToken);
-      localStorage.setItem(REFRESH_TOKEN_KEY, response.data.refreshToken);
-      navigate('/dashboard', { replace: true });
+      const user = await login(email, password);
+      const targetRoute = user.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard';
+      navigate(targetRoute, { replace: true });
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Login failed', err);

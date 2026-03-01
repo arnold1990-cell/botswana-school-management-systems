@@ -50,6 +50,27 @@ export const DashboardPage = () => (
   </section>
 );
 
+
+export const TeacherDashboardPage = () => (
+  <section>
+    <PageHeader
+      title='Teacher Dashboard'
+      subtitle='Track your classes, upcoming exams, and report tasks.'
+      actionLabel='View Assignments'
+    />
+    <div className='card-grid card-grid-2'>
+      <article className='card'>
+        <h3>Assigned Classes</h3>
+        <p className='muted'>Form 1A, Form 2B, and Form 3C currently assigned.</p>
+      </article>
+      <article className='card'>
+        <h3>Pending Tasks</h3>
+        <p className='muted'>2 mark submissions and 1 report comment due this week.</p>
+      </article>
+    </div>
+  </section>
+);
+
 export const GradebookPage = () => (
   <section>
     <PageHeader title='Gradebook' subtitle='Manage classes, subjects, and learner performance.' actionLabel='Add Grade Entry' />

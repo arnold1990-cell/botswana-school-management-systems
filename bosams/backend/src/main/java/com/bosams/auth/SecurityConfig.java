@@ -44,6 +44,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(c -> c
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/teacher/**").hasRole("TEACHER")
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -92,6 +94,10 @@ class JwtFilter extends OncePerRequestFilter {
                 Claims claims = jwtService.parse(auth.substring(7));
                 UUID userId = UUID.fromString(claims.getSubject());
                 userRepository.findById(userId).ifPresentOrElse(u -> {
+                    if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {
+                        SecurityContextHolder.clearContext();
+                        return;
+                    }
                     var authority = new SimpleGrantedAuthority("ROLE_" + u.getRole().name());
                     var authentication = new UsernamePasswordAuthenticationToken(u, null, List.of(authority));
                     SecurityContextHolder.getContext().setAuthentication(authentication);

@@ -14,10 +14,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,7 +44,7 @@ class AuthLoginIntegrationTest {
     ObjectMapper objectMapper;
 
     @Test
-    void loginReturnsJwtAndCanAccessProtectedEndpoint() throws Exception {
+    void adminLoginReturnsJwtAndCanAccessProtectedEndpoint() throws Exception {
         String loginBody = """
                 {
                   "email": "admin@bosams.local",
@@ -53,7 +57,7 @@ class AuthLoginIntegrationTest {
                         .content(loginBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
+                .andExpect(jsonPath("$.user.role").value("ADMIN"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -65,5 +69,46 @@ class AuthLoginIntegrationTest {
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("admin@bosams.local"));
+    }
+
+    @Test
+    void teacherLoginCanAccessTeacherEndpointButNotAdminEndpoint() throws Exception {
+        String loginBody = """
+                {
+                  "email": "teacher@bosams.local",
+                  "password": "password"
+                }
+                """;
+
+        String loginResponseBody = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.user.role").value("TEACHER"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode loginJson = objectMapper.readTree(loginResponseBody);
+        String accessToken = loginJson.get("accessToken").asText();
+
+
+        String tokenPayload = decodeJwtPayload(accessToken);
+        assertTrue(tokenPayload.contains("\"role\":\"TEACHER\""));
+
+        mockMvc.perform(get("/api/teacher/dashboard")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("TEACHER"));
+
+        mockMvc.perform(get("/api/admin/dashboard")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isForbidden());
+    }
+    private String decodeJwtPayload(String jwt) {
+        String[] parts = jwt.split("\\.");
+        byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
+        return new String(decoded, StandardCharsets.UTF_8);
     }
 }

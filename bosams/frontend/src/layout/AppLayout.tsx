@@ -1,17 +1,24 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
-const navItems = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/gradebook', label: 'Gradebook' },
-  { to: '/exams', label: 'Exams' },
-  { to: '/reports', label: 'Reports' },
-  { to: '/teachers', label: 'Teachers' },
-];
-
 export const AppLayout = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const navItems = user?.role === 'TEACHER'
+    ? [
+        { to: '/teacher/dashboard', label: 'Teacher Dashboard' },
+        { to: '/gradebook', label: 'Gradebook' },
+        { to: '/exams', label: 'Exams' },
+        { to: '/reports', label: 'Reports' },
+      ]
+    : [
+        { to: '/dashboard', label: 'Dashboard' },
+        { to: '/gradebook', label: 'Gradebook' },
+        { to: '/exams', label: 'Exams' },
+        { to: '/reports', label: 'Reports' },
+        { to: '/teachers', label: 'Teachers' },
+      ];
 
   const onLogout = () => {
     logout();

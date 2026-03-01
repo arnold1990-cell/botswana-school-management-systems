@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const load = async (): Promise<User> => {
-    const r = await http.get('/users/me');
+    const r = await http.get('/me');
     setUser(r.data);
     return r.data;
   };

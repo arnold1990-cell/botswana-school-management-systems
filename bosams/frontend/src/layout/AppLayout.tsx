@@ -8,6 +8,7 @@ export const AppLayout = () => {
   const navItems = user?.role === 'TEACHER'
     ? [
         { to: '/teacher/dashboard', label: 'Teacher Dashboard' },
+        { to: '/learners', label: 'Learners' },
         { to: '/subjects', label: 'Subjects' },
         { to: '/marks-entry', label: 'Marks Entry' },
         { to: '/reports', label: 'Reports' },

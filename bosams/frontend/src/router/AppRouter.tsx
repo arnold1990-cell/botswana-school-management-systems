@@ -2,7 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../auth/AuthContext';
 import { AppLayout } from '../layout/AppLayout';
 import { Login } from '../pages/Login';
-import { DashboardPage, TeacherDashboardPage, TeachersPage } from '../pages/Pages';
+import { DashboardPage, TeacherDashboardPage } from '../pages/Pages';
+import { TeachersPage } from '../pages/TeachersPage';
 import { LearnersPage } from '../pages/LearnersPage';
 import { SubjectsPage } from '../pages/SubjectsPage';
 import { MarksEntryPage } from '../pages/MarksEntryPage';
@@ -23,10 +24,10 @@ export const AppRouter = () => {
             <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL']} />}>
               <Route path='dashboard' element={<DashboardPage />} />
               <Route path='teachers' element={<TeachersPage />} />
-              <Route path='learners' element={<LearnersPage />} />
             </Route>
 
             <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
+              <Route path='learners' element={<LearnersPage />} />
               <Route path='teacher/dashboard' element={<TeacherDashboardPage />} />
               <Route path='subjects' element={<SubjectsPage />} />
               <Route path='marks-entry' element={<MarksEntryPage />} />

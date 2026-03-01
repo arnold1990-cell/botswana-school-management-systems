@@ -48,7 +48,14 @@ public class MarksService {
         if (authz.isTeacher(actor)) {
             AcademicYear active = authz.getActiveAcademicYear();
             if (!s.getExamGroup().getAcademicYear().getId().equals(active.getId())) throw new ApiException(HttpStatus.FORBIDDEN,"NON_ACTIVE_YEAR","Teachers can only access active year");
-            if (!authz.teacherHasAssignment(actor.getId(), active.getId(), s.getStream().getId(), s.getSubject().getId())) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Teacher not assigned");
+            Integer gradeLevel = null;
+            if (s.getStream() != null && s.getStream().getStandard() != null) {
+                String digits = s.getStream().getStandard().getName().replaceAll("\\D", "");
+                if (!digits.isBlank()) {
+                    gradeLevel = Integer.parseInt(digits);
+                }
+            }
+            if (gradeLevel == null || !authz.teacherHasAssignment(actor.getId(), active.getId(), gradeLevel, s.getSubject().getId())) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Teacher not assigned");
         }
     }
     private ExamSchedule getSched(Long id){ return schedules.findById(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","Schedule not found")); }

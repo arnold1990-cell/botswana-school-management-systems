@@ -90,10 +90,10 @@ class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String auth = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (auth != null && auth.startsWith("Bearer ")) {
+        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             try {
-                Claims claims = jwtService.parse(auth.substring(7));
+                Claims claims = jwtService.parse(authorizationHeader.substring(7));
                 UUID userId = UUID.fromString(claims.getSubject());
                 userRepository.findById(userId).ifPresentOrElse(u -> {
                     if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {

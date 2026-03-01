@@ -11,11 +11,11 @@ import java.util.*;
 
 @RestController
 public class ExamController {
-    private final ExamScheduleRepository schedules; private final ExamGroupRepository groups; private final AuthorizationService authz;
-    public ExamController(ExamScheduleRepository schedules, ExamGroupRepository groups, AuthorizationService authz) {this.schedules=schedules;this.groups=groups;this.authz=authz;}
+    private final ExamScheduleRepository schedules; private final ExamGroupRepository groups; private final AuthorizationService auth;
+    public ExamController(ExamScheduleRepository schedules, ExamGroupRepository groups, AuthorizationService auth) {this.schedules=schedules;this.groups=groups;this.auth=auth;}
     @GetMapping("/api/exam-schedules") public List<ExamSchedule> list(@AuthenticationPrincipal UserEntity me,@RequestParam(required = false) Long streamId){
-        if(me.getRole()==Enums.Role.TEACHER){ AcademicYear ay=authz.getActiveAcademicYear(); if(streamId!=null && !authz.teacherStreamIds(me.getId(), ay.getId()).contains(streamId)) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Not assigned");
-            if(streamId==null){ List<ExamSchedule> all=schedules.findAll(); Set<Long> streams=authz.teacherStreamIds(me.getId(), ay.getId()); return all.stream().filter(s->streams.contains(s.getStream().getId())&&s.getExamGroup().getAcademicYear().getId().equals(ay.getId())).toList(); }
+        if(me.getRole()==Enums.Role.TEACHER){ AcademicYear ay=auth.getActiveAcademicYear(); if(streamId!=null && !auth.teacherStreamIds(me.getId(), ay.getId()).contains(streamId)) throw new ApiException(HttpStatus.FORBIDDEN,"NOT_ASSIGNED","Not assigned");
+            if(streamId==null){ List<ExamSchedule> all=schedules.findAll(); List<Long> streams=auth.teacherStreamIds(me.getId(), ay.getId()); return all.stream().filter(s->streams.contains(s.getStream().getId())&&s.getExamGroup().getAcademicYear().getId().equals(ay.getId())).toList(); }
         }
         return streamId==null?schedules.findAll():schedules.findByStreamId(streamId);
     }

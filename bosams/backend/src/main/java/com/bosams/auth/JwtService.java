@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -26,18 +27,18 @@ public class JwtService {
         this.refreshDays = refreshDays;
     }
 
-    public String generateAccessToken(Long userId, String role) {
+    public String generateAccessToken(UUID userId, String role) {
         return token(userId, role, Duration.ofMinutes(accessMinutes));
     }
 
-    public String generateRefreshToken(Long userId) {
+    public String generateRefreshToken(UUID userId) {
         return token(userId, null, Duration.ofDays(refreshDays));
     }
 
-    private String token(Long userId, String role, Duration duration) {
+    private String token(UUID userId, String role, Duration duration) {
         Instant now = Instant.now();
         var builder = Jwts.builder()
-                .subject(String.valueOf(userId))
+                .subject(userId.toString())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(duration)));
 

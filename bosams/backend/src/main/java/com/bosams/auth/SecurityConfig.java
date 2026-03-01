@@ -1,6 +1,7 @@
 package com.bosams.auth;
 
 import com.bosams.repository.UserRepository;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +30,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 @Configuration
 @EnableWebSecurity
@@ -87,14 +89,15 @@ class JwtFilter extends OncePerRequestFilter {
         String auth = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (auth != null && auth.startsWith("Bearer ")) {
             try {
-                var claims = jwtService.parse(auth.substring(7));
-                Long userId = Long.valueOf(claims.getSubject());
-                userRepository.findById(userId).ifPresent(u -> {
+                Claims claims = jwtService.parse(auth.substring(7));
+                UUID userId = UUID.fromString(claims.getSubject());
+                userRepository.findById(userId).ifPresentOrElse(u -> {
                     var authority = new SimpleGrantedAuthority("ROLE_" + u.getRole().name());
                     var authentication = new UsernamePasswordAuthenticationToken(u, null, List.of(authority));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                });
-            } catch (Exception ignored) {
+                }, SecurityContextHolder::clearContext);
+            } catch (Exception ex) {
+                SecurityContextHolder.clearContext();
             }
         }
         filterChain.doFilter(request, response);

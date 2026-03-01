@@ -1,5 +1,7 @@
 package com.bosams.web.dto;
 
+import java.util.UUID;
+
 public record LoginResponse(
         String accessToken,
         String refreshToken,
@@ -8,7 +10,7 @@ public record LoginResponse(
         UserSummary user
 ) {
     public record UserSummary(
-            Long id,
+            UUID id,
             String fullName,
             String email,
             String role

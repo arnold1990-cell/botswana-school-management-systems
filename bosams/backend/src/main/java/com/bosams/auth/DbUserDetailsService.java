@@ -23,13 +23,16 @@ public class DbUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         UserEntity user = userRepository.findByEmail(email)
-                .filter(u -> u.getStatus() == Enums.UserStatus.ACTIVE)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        boolean active = user.getStatus() == Enums.UserStatus.ACTIVE;
 
         return User.builder()
                 .username(user.getEmail())
                 .password(user.getPasswordHash())
                 .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
+                .accountLocked(!active)
+                .disabled(!active)
                 .build();
     }
 }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import api from '../api/client';
+import http, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/http';
 import { User } from '../types/auth';
 
 type Ctx = { user?: User; login: (email: string, password: string) => Promise<void>; logout: () => void };
@@ -11,7 +11,7 @@ export const AuthProvider = ({children}:{children:React.ReactNode})=>{
   const [loading, setLoading] = useState(true);
   const load = async()=>{
     try {
-      const r=await api.get('/users/me');
+      const r=await http.get('/users/me');
       setUser(r.data);
     } catch {
       setUser(undefined);
@@ -20,13 +20,13 @@ export const AuthProvider = ({children}:{children:React.ReactNode})=>{
     }
   };
   useEffect(()=>{
-    if(localStorage.getItem('accessToken')) {
+    if(localStorage.getItem(ACCESS_TOKEN_KEY)) {
       load();
       return;
     }
     setLoading(false);
   },[]);
-  const login = async(email:string,password:string)=>{ const r=await api.post('/auth/login',{email,password}); localStorage.setItem('accessToken',r.data.accessToken); localStorage.setItem('refreshToken',r.data.refreshToken); await load(); };
-  const logout = ()=>{ localStorage.clear(); setUser(undefined); };
+  const login = async(email:string,password:string)=>{ const r=await http.post('/auth/login',{email,password}); localStorage.setItem(ACCESS_TOKEN_KEY,r.data.accessToken); localStorage.setItem(REFRESH_TOKEN_KEY,r.data.refreshToken); await load(); };
+  const logout = ()=>{ localStorage.removeItem(ACCESS_TOKEN_KEY); localStorage.removeItem(REFRESH_TOKEN_KEY); setUser(undefined); };
   return <AuthContext.Provider value={{user,login,logout,loading}}>{children}</AuthContext.Provider>
 }

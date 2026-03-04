@@ -9,5 +9,6 @@ import java.util.Optional;
 
 public interface AssessmentTaskRepository extends JpaRepository<AssessmentTaskEntity, Long> {
     List<AssessmentTaskEntity> findByTermIdOrderByType(Long termId);
+    Optional<AssessmentTaskEntity> findByTermIdAndType(Long termId, Enums.AssessmentType type);
     Optional<AssessmentTaskEntity> findByTermAcademicYearYearAndTermTermNoAndType(Integer year, Integer termNo, Enums.AssessmentType type);
 }

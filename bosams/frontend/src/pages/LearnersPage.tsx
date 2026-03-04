@@ -7,13 +7,15 @@ type Learner = { id: number; admissionNo: string; firstName: string; lastName: s
 export const LearnersPage = () => {
   const { user } = useAuth();
   const [learners, setLearners] = useState<Learner[]>([]);
-  const [gradeLevel, setGradeLevel] = useState('1');
+  const [gradeLevel, setGradeLevel] = useState('ALL');
   const [message, setMessage] = useState('');
   const [form, setForm] = useState({ admissionNo: '', firstName: '', lastName: '', gender: 'MALE', gradeLevel: 1 });
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = async (grade?: string) => {
-    const res = await api.get('/learners', { params: grade ? { gradeLevel: grade } : {} });
+    const params = grade && grade !== 'ALL' ? { gradeLevel: Number(grade) } : {};
+    const res = await api.get('/learners', { params });
+    console.info('[learners] list', { params, count: res.data.length });
     setLearners(res.data);
   };
 
@@ -23,7 +25,7 @@ export const LearnersPage = () => {
     e.preventDefault();
     await api.post('/learners', form);
     setMessage('Learner created successfully.');
-    setForm({ admissionNo: '', firstName: '', lastName: '', gender: 'MALE', gradeLevel: Number(gradeLevel) });
+    setForm({ admissionNo: '', firstName: '', lastName: '', gender: 'MALE', gradeLevel: Number(gradeLevel === 'ALL' ? 1 : gradeLevel) });
     await load(gradeLevel);
   };
 
@@ -52,7 +54,7 @@ export const LearnersPage = () => {
     </form>}
 
     <div className='card'>
-      <label>Filter Grade <select value={gradeLevel} onChange={async (e)=>{setGradeLevel(e.target.value); await load(e.target.value);}}>{[1,2,3,4,5,6,7].map(g=><option key={g} value={g}>{g}</option>)}</select></label>
+      <label>Filter Grade <select value={gradeLevel} onChange={async (e)=>{setGradeLevel(e.target.value); await load(e.target.value);}}><option value='ALL'>All</option>{[1,2,3,4,5,6,7].map(g=><option key={g} value={g}>{g}</option>)}</select></label>
       <table className='table'>
         <thead><tr><th>Admission</th><th>Name</th><th>Gender</th><th>Grade</th><th></th></tr></thead>
         <tbody>{learners.map(l=>{
@@ -65,6 +67,7 @@ export const LearnersPage = () => {
             </td><td>{editable ? <select value={l.gender} onChange={(e)=>setLearners(prev=>prev.map(x=>x.id===l.id?{...x, gender:e.target.value}:x))}><option>MALE</option><option>FEMALE</option></select> : l.gender}</td><td>{editable ? <select value={l.gradeLevel} onChange={(e)=>setLearners(prev=>prev.map(x=>x.id===l.id?{...x, gradeLevel:Number(e.target.value)}:x))}>{[1,2,3,4,5,6,7].map(g=><option key={g} value={g}>{g}</option>)}</select> : l.gradeLevel}</td><td>{(user?.role === 'ADMIN' || user?.role === 'PRINCIPAL') && (editable ? <button className='btn btn-primary' onClick={()=>updateLearner(l)}>Save</button> : <button className='btn btn-secondary' onClick={()=>setEditingId(l.id)}>Edit</button>)}</td></tr>;
         })}</tbody>
       </table>
+      {learners.length === 0 && <p>No learners found for selected filters.</p>}
     </div>
   </section>;
 };

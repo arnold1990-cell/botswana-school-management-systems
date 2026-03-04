@@ -30,6 +30,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -46,8 +49,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(c -> c
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/teacher/**").hasRole("TEACHER")
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -80,6 +81,7 @@ public class SecurityConfig {
 
 @Component
 class JwtFilter extends OncePerRequestFilter {
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
@@ -103,6 +105,7 @@ class JwtFilter extends OncePerRequestFilter {
                     var authority = new SimpleGrantedAuthority("ROLE_" + u.getRole().name());
                     var authentication = new UsernamePasswordAuthenticationToken(u, null, List.of(authority));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info("Authenticated request path={} userId={} role={}", request.getRequestURI(), u.getId(), u.getRole());
                 }, SecurityContextHolder::clearContext);
             } catch (Exception ex) {
                 SecurityContextHolder.clearContext();

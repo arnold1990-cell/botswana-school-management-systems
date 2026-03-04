@@ -4,6 +4,8 @@ import com.bosams.common.ApiException;
 import com.bosams.domain.*;
 import com.bosams.repository.*;
 import jakarta.validation.ValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import java.util.*;
 
 @Service
 public class AcademicMarksService {
+    private static final Logger log = LoggerFactory.getLogger(AcademicMarksService.class);
     private final StudentRepository learners;
     private final SubjectRepository subjects;
     private final AssessmentTaskRepository tasks;
@@ -34,6 +37,7 @@ public class AcademicMarksService {
     @Transactional
     public List<MarkEntryEntity> bulkSave(UUID userId, BulkMarkRequest request) {
         UserEntity actor = users.findById(userId).orElseThrow();
+        log.info("Bulk marks save userId={} role={} subjectId={} taskId={} rows={}", actor.getId(), actor.getRole(), request.subjectId(), request.taskId(), request.marks().size());
         SubjectEntity subject = subjects.findById(request.subjectId()).orElseThrow();
         AssessmentTaskEntity task = tasks.findById(request.taskId()).orElseThrow();
 
@@ -61,6 +65,19 @@ public class AcademicMarksService {
             saved.add(markEntries.save(entity));
         }
         return saved;
+    }
+
+
+
+    public List<MarkEntryEntity> list(UserEntity actor, Long subjectId, Long taskId, Integer gradeLevel) {
+        if (authorizationService.isTeacher(actor)) {
+            authorizationService.enforceTeacherAssignment(actor, gradeLevel, subjectId);
+        }
+        List<MarkEntryEntity> entries = markEntries.findByTaskIdAndSubjectId(taskId, subjectId).stream()
+                .filter(e -> Objects.equals(e.getLearner().getGradeLevel(), gradeLevel))
+                .toList();
+        log.info("Marks list userId={} role={} subjectId={} taskId={} gradeLevel={} count={}", actor.getId(), actor.getRole(), subjectId, taskId, gradeLevel, entries.size());
+        return entries;
     }
 
     @Transactional

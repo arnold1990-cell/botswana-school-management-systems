@@ -19,13 +19,13 @@ export const LearnersPage = () => {
     setLearners(res.data);
   };
 
-  useEffect(() => { load(gradeLevel); }, []);
+  useEffect(() => { load(gradeLevel); }, [gradeLevel]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     await api.post('/learners', form);
     setMessage('Learner created successfully.');
-    setForm({ admissionNo: '', firstName: '', lastName: '', gender: 'MALE', gradeLevel: Number(gradeLevel === 'ALL' ? 1 : gradeLevel) });
+    setForm({ admissionNo: '', firstName: '', lastName: '', gender: 'MALE', gradeLevel: form.gradeLevel });
     await load(gradeLevel);
   };
 
@@ -54,7 +54,7 @@ export const LearnersPage = () => {
     </form>}
 
     <div className='card'>
-      <label>Filter Grade <select value={gradeLevel} onChange={async (e)=>{setGradeLevel(e.target.value); await load(e.target.value);}}><option value='ALL'>All</option>{[1,2,3,4,5,6,7].map(g=><option key={g} value={g}>{g}</option>)}</select></label>
+      <label>Filter Grade <select value={gradeLevel} onChange={(e)=>setGradeLevel(e.target.value)}><option value='ALL'>All</option>{[1,2,3,4,5,6,7].map(g=><option key={g} value={g}>{g}</option>)}</select></label>
       <table className='table'>
         <thead><tr><th>Admission</th><th>Name</th><th>Gender</th><th>Grade</th><th></th></tr></thead>
         <tbody>{learners.map(l=>{

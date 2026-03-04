@@ -2,6 +2,7 @@ package com.bosams.auth;
 
 import com.bosams.repository.UserRepository;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -21,7 +23,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.cors.CorsConfiguration;
@@ -46,6 +50,9 @@ public class SecurityConfig {
                 .csrf(c -> c.disable())
                 .cors(c -> c.configurationSource(corsConfigurationSource()))
                 .sessionManagement(c -> c.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(c -> c
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler()))
                 .authorizeHttpRequests(c -> c
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
@@ -63,9 +70,10 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173", "http://127.0.0.1:5173", "http://localhost"));
+        config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -76,6 +84,24 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Authentication required\"}");
+        };
+    }
+
+    @Bean
+    AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Insufficient permissions\"}");
+        };
     }
 }
 
@@ -92,25 +118,36 @@ class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String path = request.getRequestURI();
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            try {
-                Claims claims = jwtService.parse(authorizationHeader.substring(7));
-                UUID userId = UUID.fromString(claims.getSubject());
-                userRepository.findById(userId).ifPresentOrElse(u -> {
-                    if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {
-                        SecurityContextHolder.clearContext();
-                        return;
-                    }
-                    var authority = new SimpleGrantedAuthority("ROLE_" + u.getRole().name());
-                    var authentication = new UsernamePasswordAuthenticationToken(u, null, List.of(authority));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info("Authenticated request path={} userId={} role={}", request.getRequestURI(), u.getId(), u.getRole());
-                }, SecurityContextHolder::clearContext);
-            } catch (Exception ex) {
-                SecurityContextHolder.clearContext();
-            }
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            log.debug("JWT NO TOKEN path={} method={}", path, request.getMethod());
+            filterChain.doFilter(request, response);
+            return;
         }
+
+        try {
+            Claims claims = jwtService.parse(authorizationHeader.substring(7));
+            UUID userId = UUID.fromString(claims.getSubject());
+            userRepository.findById(userId).ifPresentOrElse(u -> {
+                if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {
+                    log.warn("JWT INACTIVE USER path={} userId={} status={}", path, u.getId(), u.getStatus());
+                    SecurityContextHolder.clearContext();
+                    return;
+                }
+                var authority = new SimpleGrantedAuthority("ROLE_" + u.getRole().name());
+                var authentication = new UsernamePasswordAuthenticationToken(u, null, List.of(authority));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("JWT AUTH OK path={} method={} userId={} role={}", path, request.getMethod(), u.getId(), u.getRole());
+            }, () -> {
+                log.warn("JWT USER NOT FOUND path={} subject={}", path, claims.getSubject());
+                SecurityContextHolder.clearContext();
+            });
+        } catch (JwtException | IllegalArgumentException ex) {
+            log.warn("JWT BAD TOKEN path={} reason={}", path, ex.getMessage());
+            SecurityContextHolder.clearContext();
+        }
+
         filterChain.doFilter(request, response);
     }
 }

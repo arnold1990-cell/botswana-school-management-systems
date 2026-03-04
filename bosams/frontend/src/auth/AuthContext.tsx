@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import http, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/http';
+import api, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/client';
 import { User } from '../types/auth';
 
 type Ctx = { user?: User; login: (email: string, password: string) => Promise<User>; logout: () => void };
@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const load = async (): Promise<User> => {
-    const r = await http.get('/me');
+    const r = await api.get('/me');
     setUser(r.data);
     return r.data;
   };
@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
-    const r = await http.post('/auth/login', { email, password });
+    const r = await api.post('/auth/login', { email, password });
     localStorage.setItem(ACCESS_TOKEN_KEY, r.data.accessToken);
     localStorage.setItem(REFRESH_TOKEN_KEY, r.data.refreshToken);
     return load();

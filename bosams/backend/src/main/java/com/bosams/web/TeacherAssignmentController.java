@@ -59,6 +59,13 @@ public class TeacherAssignmentController {
                 .toList();
     }
 
+
+    @GetMapping("/teachers")
+    @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL')")
+    public List<TeacherUserResponse> teachersLookup() {
+        return teachers();
+    }
+
     @PostMapping("/admin/teacher-assignments")
     @PreAuthorize("hasRole('ADMIN')")
     public TeacherAssignment create(@RequestBody AssignReq req) {

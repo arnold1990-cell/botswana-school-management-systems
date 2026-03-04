@@ -3,6 +3,8 @@ package com.bosams.auth;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +17,7 @@ import java.util.UUID;
 
 @Service
 public class JwtService {
+    private static final Logger log = LoggerFactory.getLogger(JwtService.class);
     private final SecretKey key;
     private final long accessMinutes;
     private final long refreshDays;
@@ -25,6 +28,7 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessMinutes = accessMinutes;
         this.refreshDays = refreshDays;
+        log.info("JWT initialized accessMinutes={} refreshDays={} secretLength={}", accessMinutes, refreshDays, secret.length());
     }
 
     public String generateAccessToken(UUID userId, String role) {

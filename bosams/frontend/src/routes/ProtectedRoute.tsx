@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { ACCESS_TOKEN_KEY } from '../api/http';
+import { ACCESS_TOKEN_KEY } from '../api/client';
 
 export const ProtectedRoute = () => {
   const location = useLocation();

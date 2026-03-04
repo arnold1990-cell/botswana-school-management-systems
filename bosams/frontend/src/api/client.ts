@@ -1,8 +1,18 @@
 import axios from 'axios';
-import { ACCESS_TOKEN_KEY } from './http';
+
+export const ACCESS_TOKEN_KEY = 'bosams_access_token';
+export const REFRESH_TOKEN_KEY = 'bosams_refresh_token';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+const clearAuthAndRedirect = () => {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  window.location.href = '/login';
+};
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -12,22 +22,49 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  console.info('[api] request', config.method?.toUpperCase(), config.url, { hasToken: !!token });
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => {
-    console.info('[api] response', response.status, response.config.url, response.data);
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      window.location.href = '/login';
+    const originalRequest = error.config as any;
+
+    if (error.response?.status === 403) {
+      clearAuthAndRedirect();
+      throw error;
     }
 
-    throw error;
+    if (error.response?.status !== 401 || originalRequest?._retry) {
+      throw error;
+    }
+
+    if (originalRequest?.url?.includes('/auth/refresh')) {
+      clearAuthAndRedirect();
+      throw error;
+    }
+
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) {
+      clearAuthAndRedirect();
+      throw error;
+    }
+
+    originalRequest._retry = true;
+
+    try {
+      const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+      const newAccessToken = refreshResponse.data.accessToken;
+
+      localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
+      originalRequest.headers = originalRequest.headers || {};
+      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+      return api(originalRequest);
+    } catch (refreshError) {
+      clearAuthAndRedirect();
+      throw refreshError;
+    }
   }
 );
 

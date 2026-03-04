@@ -35,7 +35,7 @@ public class TeacherAssignmentController {
     }
 
     @PostMapping("/admin/teachers")
-    @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL')")
+    @PreAuthorize("hasRole('ADMIN')")
     public TeacherUserResponse createTeacher(@RequestBody CreateTeacherRequest req) {
         if (users.findByEmail(req.email()).isPresent()) {
             throw new ApiException(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", "User with email already exists");
@@ -60,7 +60,7 @@ public class TeacherAssignmentController {
     }
 
     @PostMapping("/admin/teacher-assignments")
-    @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL')")
+    @PreAuthorize("hasRole('ADMIN')")
     public TeacherAssignment create(@RequestBody AssignReq req) {
         TeacherAssignment ta = new TeacherAssignment();
         UserEntity teacher = users.findById(req.teacherUserId()).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Teacher not found"));

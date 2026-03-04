@@ -4,16 +4,22 @@ import com.bosams.common.ApiException;
 import com.bosams.domain.*;
 import com.bosams.repository.AcademicYearRepository;
 import com.bosams.repository.TeacherAssignmentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class AuthorizationService implements AuthorizationServiceOperations {
+    private static final Logger log = LoggerFactory.getLogger(AuthorizationService.class);
+    private static final Long DEFAULT_SCHOOL_ID = 1L;
+
     private final AcademicYearRepository yearRepository;
     private final TeacherAssignmentRepository assignmentRepository;
 
@@ -63,5 +69,39 @@ public class AuthorizationService implements AuthorizationServiceOperations {
             return List.of();
         }
         return assignmentRepository.teacherSubjectIdsForStream(teacherUserId, academicYearId, streamId).stream().toList();
+    }
+
+    @Override
+    public void enforceSchoolAccess(UserEntity user, Long schoolId) {
+        if (isAdmin(user)) {
+            return;
+        }
+
+        if (schoolId == null || !DEFAULT_SCHOOL_ID.equals(schoolId)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "SCHOOL_SCOPE_DENIED", "User has no access to this school");
+        }
+
+        log.info("enforceSchoolAccess userId={} role={} schoolId={}", user.getId(), user.getRole(), schoolId);
+    }
+
+    @Override
+    public void enforceTeacherAssignment(UserEntity user, Integer gradeLevel, Long subjectId) {
+        if (!isTeacher(user)) {
+            return;
+        }
+        Long activeYearId = getActiveAcademicYear().getId();
+        boolean assigned = teacherHasAssignment(user.getId(), activeYearId, gradeLevel, subjectId);
+        log.info("enforceTeacherAssignment userId={} gradeLevel={} subjectId={} assigned={}", user.getId(), gradeLevel, subjectId, assigned);
+        if (!assigned) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_ASSIGNED", "Teacher not assigned for selected grade and subject");
+        }
+    }
+
+    @Override
+    public Optional<Long> resolveSchoolId(UserEntity user) {
+        if (user == null) {
+            return Optional.empty();
+        }
+        return Optional.of(DEFAULT_SCHOOL_ID);
     }
 }

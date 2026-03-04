@@ -12,11 +12,15 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  console.info('[api] request', config.method?.toUpperCase(), config.url, { hasToken: !!token });
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.info('[api] response', response.status, response.config.url, response.data);
+    return response;
+  },
   async (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem(ACCESS_TOKEN_KEY);

@@ -18,6 +18,16 @@ public class AcademicMarksController {
         this.service = service;
     }
 
+
+    @GetMapping("/marks")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','PRINCIPAL')")
+    public List<MarkEntryEntity> list(@AuthenticationPrincipal UserEntity user,
+                                      @RequestParam Long subjectId,
+                                      @RequestParam Long taskId,
+                                      @RequestParam Integer gradeLevel) {
+        return service.list(user, subjectId, taskId, gradeLevel);
+    }
+
     @PostMapping("/marks/bulk")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER','PRINCIPAL')")
     public List<MarkEntryEntity> bulk(@AuthenticationPrincipal UserEntity user, @RequestBody AcademicMarksService.BulkMarkRequest request) {

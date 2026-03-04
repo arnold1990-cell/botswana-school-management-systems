@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
 type Teacher = { id: string; fullName: string; email: string };
 type Subject = { id: number; name: string };
@@ -8,6 +9,7 @@ type AcademicYear = { id: number; year: number };
 type Assignment = { id: number; teacher: Teacher; gradeLevel: number; subject: Subject; academicYear: AcademicYear };
 
 export const TeachersPage = () => {
+  const { user } = useAuth();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [yearId, setYearId] = useState<number>();
@@ -45,23 +47,27 @@ export const TeachersPage = () => {
     await load();
   };
 
+  const canManageTeachers = user?.role === 'ADMIN';
+
   return <section>
     <h2>Teacher Management</h2>
-    <form className='card form-grid' onSubmit={createTeacher}>
+    {canManageTeachers && <form className='card form-grid' onSubmit={createTeacher}>
       <h3>Create Teacher</h3>
       <input value={teacherForm.fullName} onChange={(e)=>setTeacherForm({...teacherForm, fullName: e.target.value})} placeholder='Full name' required />
       <input type='email' value={teacherForm.email} onChange={(e)=>setTeacherForm({...teacherForm, email: e.target.value})} placeholder='Email' required />
       <input type='password' value={teacherForm.password} onChange={(e)=>setTeacherForm({...teacherForm, password: e.target.value})} placeholder='Password' required />
       <button className='btn btn-primary' type='submit'>Create Teacher</button>
-    </form>
+    </form>}
 
-    <form className='card form-grid' onSubmit={assignTeacher}>
+    {canManageTeachers && <form className='card form-grid' onSubmit={assignTeacher}>
       <h3>Assign Teacher</h3>
       <select value={assignmentForm.teacherUserId} onChange={(e)=>setAssignmentForm({...assignmentForm, teacherUserId: e.target.value})}>{teachers.map(t=><option key={t.id} value={t.id}>{t.fullName}</option>)}</select>
       <select value={assignmentForm.gradeLevel} onChange={(e)=>setAssignmentForm({...assignmentForm, gradeLevel: Number(e.target.value)})}>{[1,2,3,4,5,6,7].map(g=><option key={g} value={g}>Grade {g}</option>)}</select>
       <select value={assignmentForm.subjectId} onChange={(e)=>setAssignmentForm({...assignmentForm, subjectId: Number(e.target.value)})}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
       <button className='btn btn-primary' type='submit'>Assign</button>
-    </form>
+    </form>}
+
+    {!canManageTeachers && <p>Principals can view teacher assignments but cannot create teachers or assign teachers.</p>}
 
     <article className='card'>
       <table className='table'>

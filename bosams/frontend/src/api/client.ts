@@ -13,58 +13,42 @@ const clearAuthAndRedirect = () => {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const requestUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
+  config.headers = config.headers || {};
+  config.headers['Content-Type'] = 'application/json';
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  console.info('[api] request', { url: requestUrl, hasToken: Boolean(token) });
   return config;
 });
 
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config as any;
+  (response) => {
+    const requestUrl = `${response.config.baseURL ?? ''}${response.config.url ?? ''}`;
+    console.info('[api] response', { url: requestUrl, status: response.status });
+    return response;
+  },
+  (error) => {
+    const status = error.response?.status;
+    const requestUrl = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    console.info('[api] response', { url: requestUrl, hasToken: Boolean(token), status: status ?? 0 });
 
-    if (error.response?.status === 403) {
+    if (status === 401 || status === 403) {
       clearAuthAndRedirect();
-      throw error;
     }
 
-    if (error.response?.status !== 401 || originalRequest?._retry) {
-      throw error;
-    }
-
-    if (originalRequest?.url?.includes('/auth/refresh')) {
-      clearAuthAndRedirect();
-      throw error;
-    }
-
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-    if (!refreshToken) {
-      clearAuthAndRedirect();
-      throw error;
-    }
-
-    originalRequest._retry = true;
-
-    try {
-      const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
-      const newAccessToken = refreshResponse.data.accessToken;
-
-      localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
-      originalRequest.headers = originalRequest.headers || {};
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-      return api(originalRequest);
-    } catch (refreshError) {
-      clearAuthAndRedirect();
-      throw refreshError;
-    }
+    return Promise.reject(error);
   }
 );
 

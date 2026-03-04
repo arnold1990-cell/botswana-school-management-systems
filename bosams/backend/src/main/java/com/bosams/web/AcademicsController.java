@@ -46,6 +46,12 @@ public class AcademicsController {
         return academicsService.ensureActiveYearSetup();
     }
 
+    @GetMapping("/academics/active-year")
+    @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
+    public AcademicYear activeYear() {
+        return academicsService.ensureActiveYearSetup();
+    }
+
     @GetMapping("/terms")
     @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
     public List<Term> terms(@RequestParam(required = false) Integer year) {

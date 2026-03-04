@@ -5,6 +5,8 @@ import com.bosams.domain.SubjectEntity;
 import com.bosams.repository.SubjectRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/subjects")
 public class SubjectsController {
+    private static final Logger log = LoggerFactory.getLogger(SubjectsController.class);
+
     private final SubjectRepository subjects;
 
     public SubjectsController(SubjectRepository subjects) {
@@ -21,7 +25,11 @@ public class SubjectsController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
-    public List<SubjectEntity> list() { return subjects.findAll(); }
+    public List<SubjectEntity> list(@RequestParam(required = false) Integer grade) {
+        List<SubjectEntity> found = subjects.findAll();
+        log.info("Subjects lookup grade={} count={}", grade, found.size());
+        return found;
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

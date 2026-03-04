@@ -121,7 +121,7 @@ class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            log.debug("JWT NO TOKEN path={} method={}", path, request.getMethod());
+            log.debug("NO TOKEN path={} method={}", path, request.getMethod());
             filterChain.doFilter(request, response);
             return;
         }
@@ -131,20 +131,20 @@ class JwtFilter extends OncePerRequestFilter {
             UUID userId = UUID.fromString(claims.getSubject());
             userRepository.findById(userId).ifPresentOrElse(u -> {
                 if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {
-                    log.warn("JWT INACTIVE USER path={} userId={} status={}", path, u.getId(), u.getStatus());
+                    log.warn("INACTIVE USER userId={} path={} status={}", u.getId(), path, u.getStatus());
                     SecurityContextHolder.clearContext();
                     return;
                 }
                 var authority = new SimpleGrantedAuthority("ROLE_" + u.getRole().name());
                 var authentication = new UsernamePasswordAuthenticationToken(u, null, List.of(authority));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.info("JWT AUTH OK path={} method={} userId={} role={}", path, request.getMethod(), u.getId(), u.getRole());
+                log.info("AUTH OK path={} method={} userId={} role={}", path, request.getMethod(), u.getId(), u.getRole());
             }, () -> {
-                log.warn("JWT USER NOT FOUND path={} subject={}", path, claims.getSubject());
+                log.warn("USER NOT FOUND userId={} path={}", claims.getSubject(), path);
                 SecurityContextHolder.clearContext();
             });
         } catch (JwtException | IllegalArgumentException ex) {
-            log.warn("JWT BAD TOKEN path={} reason={}", path, ex.getMessage());
+            log.warn("BAD TOKEN path={} err={}", path, ex.getMessage());
             SecurityContextHolder.clearContext();
         }
 

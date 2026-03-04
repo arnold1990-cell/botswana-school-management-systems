@@ -1,3 +1,4 @@
+import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -10,6 +11,15 @@ type Learner = { id: number; admissionNo: string; firstName: string; lastName: s
 type MarkEntry = { learner: Learner; score: number };
 
 const gradeOf = (score: number) => score >= 40 ? 'A' : score >= 35 ? 'B' : score >= 30 ? 'C' : score >= 25 ? 'D' : score >= 20 ? 'E' : 'F';
+
+const toMessage = (error: unknown, fallback: string) => {
+  const axiosError = error as AxiosError<{ message?: string }>;
+  const status = axiosError.response?.status;
+  if (status === 401 || status === 403) {
+    return 'You are not authorized to load marks setup data. Please sign in again or contact an administrator.';
+  }
+  return axiosError.response?.data?.message ?? fallback;
+};
 
 export const MarksEntryPage = () => {
   const { user } = useAuth();
@@ -25,23 +35,63 @@ export const MarksEntryPage = () => {
   const [scores, setScores] = useState<Record<number, number>>({});
   const [status, setStatus] = useState<'DRAFT' | 'SUBMITTED'>('DRAFT');
   const [testTypes, setTestTypes] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string>('');
 
   useEffect(() => { (async () => {
-    const yr: AcademicYear = (await api.get('/academic-years/current')).data;
-    setYear(yr.year);
-    const [termRes, subRes, typeRes] = await Promise.all([
-      api.get('/terms', { params: { year: yr.year } }),
-      api.get('/subjects'),
-      api.get('/test-types'),
-    ]);
-    setTerms(termRes.data); setTermId(termRes.data[0]?.id);
-    setSubjects(subRes.data); setSubjectId(subRes.data[0]?.id);
-    setTestTypes(typeRes.data);
-    console.info('[marks] bootstrap', { year: yr.year, termCount: termRes.data.length, subjectCount: subRes.data.length, testTypes: typeRes.data });
+    try {
+      setLoadError('');
+      const yr: AcademicYear = (await api.get('/academics/active-year')).data;
+      setYear(yr.year);
+
+      const [termRes, typeRes] = await Promise.all([
+        api.get('/terms', { params: { year: yr.year } }),
+        api.get('/test-types'),
+      ]);
+
+      const termList = termRes.data as Term[];
+      setTerms(termList);
+      setTermId(termList[0]?.id);
+      setTestTypes(typeRes.data);
+
+      if (termList.length === 0) {
+        setLoadError('No terms found for the active year. Confirm academics seeding has run.');
+      }
+
+      console.info('[marks] bootstrap', { year: yr.year, termCount: termList.length, testTypes: typeRes.data });
+    } catch (error) {
+      setLoadError(toMessage(error, 'Failed to load active year/terms/tasks setup data.'));
+    }
   })(); }, []);
 
-  useEffect(() => { if (!termId) return; api.get('/tasks', { params: { termId } }).then((r)=>{ setTasks(r.data); setTaskId(r.data[0]?.id); }); }, [termId]);
-  useEffect(() => { api.get('/learners', { params: { gradeLevel } }).then((r)=>setLearners(r.data)); }, [gradeLevel]);
+  useEffect(() => {
+    if (!termId) return;
+    api.get('/tasks', { params: { termId } })
+      .then((r) => {
+        setTasks(r.data);
+        setTaskId(r.data[0]?.id);
+        if (r.data.length === 0) {
+          setLoadError('No assessment tasks found for the selected term. Confirm CAT/EXAM seeding.');
+        }
+      })
+      .catch((error) => setLoadError(toMessage(error, 'Failed to load tasks for selected term.')));
+  }, [termId]);
+
+  useEffect(() => {
+    api.get('/subjects', { params: { grade: gradeLevel } })
+      .then((r) => {
+        setSubjects(r.data);
+        setSubjectId((current) => current ?? r.data[0]?.id);
+        if (r.data.length === 0) {
+          setLoadError('No subjects available. Seed subjects in the database and reload.');
+        }
+      })
+      .catch((error) => setLoadError(toMessage(error, 'Failed to load subjects.')));
+  }, [gradeLevel]);
+
+  useEffect(() => {
+    api.get('/learners', { params: { gradeLevel } }).then((r)=>setLearners(r.data));
+  }, [gradeLevel]);
+
   useEffect(() => {
     if (!subjectId || !taskId) return;
     api.get('/marks/status', { params: { subjectId, taskId, gradeLevel } }).then((r) => setStatus(r.data.status));
@@ -81,6 +131,7 @@ export const MarksEntryPage = () => {
 
   return <section>
     <h2>Marks Entry</h2>
+    {loadError && <p>{loadError}</p>}
     {locked && <p>Submitted/Locked</p>}
     <article className='card form-grid'>
       <label>Year <input value={year ?? ''} disabled /></label>

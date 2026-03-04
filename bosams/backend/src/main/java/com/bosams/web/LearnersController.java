@@ -18,7 +18,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/learners")
@@ -46,7 +48,8 @@ public class LearnersController {
         learner.setStatus(Enums.EntityStatus.ACTIVE);
 
         StudentEntity saved = learners.save(learner);
-        log.info("Learner created userId={} role={} learnerId={} admissionNo={} gradeLevel={}", user.getId(), user.getRole(), saved.getId(), saved.getAdmissionNo(), saved.getGradeLevel());
+        log.info("Learner created userId={} role={} learnerId={} admissionNo={} gradeLevel={} status={}",
+                user.getId(), user.getRole(), saved.getId(), saved.getAdmissionNo(), saved.getGradeLevel(), saved.getStatus());
         return saved;
     }
 
@@ -83,17 +86,22 @@ public class LearnersController {
             base = activeOnly ? learners.findByStatus(Enums.EntityStatus.ACTIVE) : learners.findAll();
         }
 
+        Map<Integer, Long> gradeHistogram = base.stream()
+                .filter(learner -> learner.getGradeLevel() != null)
+                .collect(Collectors.groupingBy(StudentEntity::getGradeLevel, Collectors.counting()));
+
         if (auth.isTeacher(user)) {
             Long activeYearId = auth.getActiveAcademicYear().getId();
             Set<Integer> assignedGrades = auth.teacherGradeLevels(user.getId(), activeYearId);
             List<StudentEntity> scoped = base.stream()
                     .filter(l -> l.getGradeLevel() != null && assignedGrades.contains(l.getGradeLevel()))
                     .toList();
-            log.info("Learner list teacher scoped userId={} assignedGrades={} count={}", user.getId(), assignedGrades, scoped.size());
+            log.info("Learner list teacher scoped userId={} assignedGrades={} count={} gradeHistogram={}",
+                    user.getId(), assignedGrades, scoped.size(), gradeHistogram);
             return scoped;
         }
 
-        log.info("Learner list result count={}", base.size());
+        log.info("Learner list result count={} gradeHistogram={}", base.size(), gradeHistogram);
         return base;
     }
 

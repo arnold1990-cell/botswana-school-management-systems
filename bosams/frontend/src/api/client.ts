@@ -18,6 +18,36 @@ const api = axios.create({
   },
 });
 
+type RetriableRequestConfig = {
+  _retry?: boolean;
+};
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken }, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const nextAccessToken = response.data?.accessToken;
+    if (typeof nextAccessToken !== 'string' || !nextAccessToken) {
+      return null;
+    }
+
+    localStorage.setItem(ACCESS_TOKEN_KEY, nextAccessToken);
+    return nextAccessToken;
+  } catch {
+    return null;
+  }
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const requestUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
@@ -38,13 +68,27 @@ api.interceptors.response.use(
     console.info('[api] response', { url: requestUrl, status: response.status });
     return response;
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status;
     const requestUrl = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
     const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const originalRequest = error.config as typeof error.config & RetriableRequestConfig;
     console.info('[api] response', { url: requestUrl, hasToken: Boolean(token), status: status ?? 0 });
 
-    if (status === 401 || status === 403) {
+    if (status === 401 && originalRequest && !originalRequest._retry && !requestUrl.endsWith('/auth/login') && !requestUrl.endsWith('/auth/refresh')) {
+      originalRequest._retry = true;
+      const nextAccessToken = await refreshAccessToken();
+
+      if (nextAccessToken) {
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+        return api(originalRequest);
+      }
+
+      clearAuthAndRedirect();
+    }
+
+    if (status === 401 && (!originalRequest || requestUrl.endsWith('/auth/login') || requestUrl.endsWith('/auth/refresh'))) {
       clearAuthAndRedirect();
     }
 

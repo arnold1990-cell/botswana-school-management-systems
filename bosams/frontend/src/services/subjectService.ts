@@ -57,7 +57,6 @@ export const getSubjects = async (filters: SubjectFilters = {}): Promise<Subject
         ...(filters.level ? { level: filters.level } : {}),
         ...(typeof filters.grade === 'number' ? { grade: filters.grade } : {}),
       },
-      _skipAuthRedirect: true,
     } as any));
 
     return Array.isArray(response.data) ? response.data.map(normalizeSubject) : [];

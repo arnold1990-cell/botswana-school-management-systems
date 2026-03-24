@@ -97,23 +97,32 @@ api.interceptors.request.use((config) => {
     attachedAuthorization = true;
   }
 
-  console.info('[api] before request token present', Boolean(token));
-  console.info('[api] before request Authorization header attached', attachedAuthorization);
-  console.info('[api] request', { url: requestUrl });
+  if (import.meta.env.DEV) {
+    console.info('[api] before request token read', {
+      tokenKey: ACCESS_TOKEN_KEY,
+      hasToken: Boolean(token),
+    });
+    console.info('[api] before request Authorization header attached', attachedAuthorization);
+    console.info('[api] request', { url: requestUrl });
+  }
   return config;
 });
 
 api.interceptors.response.use(
   (response) => {
     const requestUrl = `${response.config.baseURL ?? ''}${response.config.url ?? ''}`;
-    console.info('[api] response', { url: requestUrl, status: response.status });
+    if (import.meta.env.DEV) {
+      console.info('[api] response', { url: requestUrl, status: response.status });
+    }
     return response;
   },
   async (error) => {
     const status = error.response?.status;
     const requestUrl = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
     const originalRequest = error.config as typeof error.config & RetriableRequestConfig;
-    console.info('[api] response', { url: requestUrl, status: status ?? 0 });
+    if (import.meta.env.DEV) {
+      console.info('[api] response', { url: requestUrl, status: status ?? 0 });
+    }
 
     if (status === 401 && originalRequest && !originalRequest._skipAuthRedirect && !originalRequest._retry && !requestUrl.endsWith('/auth/login') && !requestUrl.endsWith('/auth/refresh')) {
       originalRequest._retry = true;

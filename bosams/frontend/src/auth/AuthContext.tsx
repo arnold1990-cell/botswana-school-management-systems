@@ -38,6 +38,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const bootstrap = async () => {
+      if (import.meta.env.DEV) {
+        console.info('[auth] bootstrap: token read', {
+          tokenKey: ACCESS_TOKEN_KEY,
+          hasToken: Boolean(getAccessToken()),
+        });
+      }
       if (!hasValidToken()) {
         clearStoredAuth();
         setUser(undefined);
@@ -62,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const r = await api.post('/auth/login', { email, password });
     const jwtValue = typeof r.data?.accessToken === 'string' && r.data.accessToken ? r.data.accessToken : null;
     if (jwtValue) {
-      localStorage.setItem('accessToken', jwtValue);
+      localStorage.setItem(ACCESS_TOKEN_KEY, jwtValue);
     } else {
       clearStoredAuth();
       throw new Error('Login response did not include an access token');
@@ -71,7 +77,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem(REFRESH_TOKEN_KEY, r.data.refreshToken);
     }
     if (import.meta.env.DEV) {
-      console.info('[auth] after login: token stored', Boolean(localStorage.getItem(ACCESS_TOKEN_KEY)));
+      console.info('[auth] after login: token stored', {
+        tokenKey: ACCESS_TOKEN_KEY,
+        hasToken: Boolean(localStorage.getItem(ACCESS_TOKEN_KEY)),
+      });
     }
     return load();
   };

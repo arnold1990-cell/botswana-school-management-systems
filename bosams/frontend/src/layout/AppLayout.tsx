@@ -111,7 +111,7 @@ export const AppLayout = () => {
             <h1 className='topbar-title'>School Operations Console</h1>
           </div>
           <div className='topbar-user'>
-            <span>{user?.fullName ?? 'School Admin'}</span>
+            <span>{user?.fullName ?? 'Not signed in'}</span>
             <button className='btn btn-secondary' type='button' onClick={onLogout}>Logout</button>
           </div>
         </header>

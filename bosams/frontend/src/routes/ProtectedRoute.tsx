@@ -4,14 +4,14 @@ import { useAuth } from '../auth/AuthContext';
 
 export const ProtectedRoute = () => {
   const location = useLocation();
-  const { loading, user } = useAuth();
+  const { loading, authInitialized, isAuthenticated } = useAuth();
   const accessToken = getAccessToken();
 
-  if (loading) {
+  if (!authInitialized || loading) {
     return <div>Loading...</div>;
   }
 
-  if (!accessToken || !user) {
+  if (!accessToken || !isAuthenticated) {
     return <Navigate to='/login' replace state={{ from: location }} />;
   }
 

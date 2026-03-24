@@ -22,7 +22,7 @@ type StudentCategory = { id: number; name: string };
 
 export const LearnersPage = () => {
   const { user } = useAuth();
-  const { authReady, authLoading } = useAuthReady();
+  const { authReady, authLoading, isAuthenticated } = useAuthReady();
   const [learners, setLearners] = useState<Learner[]>([]);
   const [gradeLevel, setGradeLevel] = useState('ALL');
   const [query, setQuery] = useState('');
@@ -62,16 +62,16 @@ export const LearnersPage = () => {
   };
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !isAuthenticated) return;
     load(gradeLevel, query);
-  }, [authReady, gradeLevel]);
+  }, [authReady, isAuthenticated, gradeLevel]);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !isAuthenticated) return;
     api.get<StudentCategory[]>('/student-categories')
       .then((response) => setCategories(response.data ?? []))
       .catch(() => setCategories([]));
-  }, [authReady]);
+  }, [authReady, isAuthenticated]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();

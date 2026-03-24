@@ -4,15 +4,15 @@ import { useAuth } from '../auth/AuthContext';
 import { Role } from '../types/auth';
 
 export const RoleProtectedRoute = ({ allowedRoles }: { allowedRoles: Role[] }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, authInitialized, isAuthenticated } = useAuth();
   const accessToken = getAccessToken();
   const location = useLocation();
 
-  if (loading) {
+  if (!authInitialized || loading) {
     return <div>Loading...</div>;
   }
 
-  if (!accessToken || !user) {
+  if (!accessToken || !isAuthenticated || !user) {
     return <Navigate to='/login' replace state={{ from: location }} />;
   }
 

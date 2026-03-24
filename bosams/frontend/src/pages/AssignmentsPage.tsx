@@ -7,7 +7,7 @@ type Subject = { id: number; name: string };
 type Assignment = { id: number; title: string; description?: string; dueDate?: string; maxScore: number; gradeLevel?: number; type: string; subject?: Subject };
 
 export const AssignmentsPage = () => {
-  const { authReady, authLoading } = useAuthReady();
+  const { authReady, authLoading, isAuthenticated } = useAuthReady();
   const [terms, setTerms] = useState<Term[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [termId, setTermId] = useState<number>();
@@ -47,14 +47,14 @@ export const AssignmentsPage = () => {
   };
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !isAuthenticated) return;
     loadSetup().catch(() => setError('Failed to load assignment setup.'));
-  }, [authReady, gradeLevel]);
+  }, [authReady, isAuthenticated, gradeLevel]);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !isAuthenticated) return;
     loadAssignments(termId, subjectId);
-  }, [authReady, termId, subjectId, gradeLevel]);
+  }, [authReady, isAuthenticated, termId, subjectId, gradeLevel]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();

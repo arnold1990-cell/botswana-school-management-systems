@@ -83,11 +83,12 @@ public class AcademicsService {
     @Transactional
     public void ensureTermsAndTasks(AcademicYear year) {
         for (int i = 1; i <= 3; i++) {
-            Term term = terms.findByAcademicYearYearAndTermNo(year.getYear(), i).orElseGet(() -> {
+            final int termNo = i;
+            Term term = terms.findByAcademicYearYearAndTermNo(year.getYear(), termNo).orElseGet(() -> {
                 Term newTerm = new Term();
                 newTerm.setAcademicYear(year);
-                newTerm.setTermNo(i);
-                newTerm.setStartDate(LocalDate.of(year.getYear(), ((i - 1) * 4) + 1, 1));
+                newTerm.setTermNo(termNo);
+                newTerm.setStartDate(LocalDate.of(year.getYear(), ((termNo - 1) * 4) + 1, 1));
                 newTerm.setEndDate(newTerm.getStartDate().plusMonths(4).minusDays(1));
                 return terms.save(newTerm);
             });

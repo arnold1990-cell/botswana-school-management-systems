@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.bosams.domain.Enums;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
     List<StudentEntity> findByStreamId(Long streamId);
@@ -13,4 +14,6 @@ public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
     List<StudentEntity> findByGradeLevelAndStreamId(Integer gradeLevel, Long streamId);
     List<StudentEntity> findByStatus(Enums.EntityStatus status);
     List<StudentEntity> findByGradeLevelAndStatus(Integer gradeLevel, Enums.EntityStatus status);
+    Optional<StudentEntity> findByAdmissionNo(String admissionNo);
+    List<StudentEntity> findByGradeLevelOrderByRollNumberAsc(Integer gradeLevel);
 }

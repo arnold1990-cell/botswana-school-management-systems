@@ -28,6 +28,21 @@ public class StudentEntity {
     @Column(name = "grade_level")
     private Integer gradeLevel;
 
+    @Column(name = "roll_number")
+    private Integer rollNumber;
+
+    @Column(name = "student_category")
+    private String studentCategory;
+
+    @Column(name = "guardian_name")
+    private String guardianName;
+
+    @Column(name = "guardian_phone")
+    private String guardianPhone;
+
+    @Column(name = "guardian_email")
+    private String guardianEmail;
+
     @ManyToOne
     @JoinColumn(name = "stream_id")
     private StreamEntity stream;

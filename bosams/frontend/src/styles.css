@@ -292,3 +292,42 @@ label {
   gap: 6px;
   font-weight: 600;
 }
+
+.form-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 180px 1fr auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.btn-pill {
+  background: linear-gradient(135deg, #d356ff, #8f5bff);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  margin-top: 6px;
+}
+
+.roll-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #2451d2;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+}

@@ -121,6 +121,8 @@ class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        log.info("JWT FILTER path={} method={} hasAuthorizationHeader={} hasBearerPrefix={}",
+                path, request.getMethod(), authorizationHeader != null, authorizationHeader != null && authorizationHeader.startsWith("Bearer "));
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
             log.debug("NO TOKEN path={} method={}", path, request.getMethod());
             filterChain.doFilter(request, response);
@@ -130,6 +132,7 @@ class JwtFilter extends OncePerRequestFilter {
         try {
             Claims claims = jwtService.parse(authorizationHeader.substring(7));
             UUID userId = UUID.fromString(claims.getSubject());
+            log.info("JWT PARSED path={} subject={} roleClaim={}", path, claims.getSubject(), claims.get("role"));
             userRepository.findById(userId).ifPresentOrElse(u -> {
                 if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {
                     log.warn("INACTIVE USER userId={} path={} status={}", u.getId(), path, u.getStatus());

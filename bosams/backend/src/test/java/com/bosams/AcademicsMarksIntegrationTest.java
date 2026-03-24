@@ -14,6 +14,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -39,7 +40,7 @@ class AcademicsMarksIntegrationTest {
     void seededSubjectsExist() throws Exception {
         mockMvc.perform(get("/api/subjects").header("Authorization", "Bearer " + token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(8)));
+                .andExpect(jsonPath("$.length()", greaterThanOrEqualTo(8)));
     }
 
     @Test

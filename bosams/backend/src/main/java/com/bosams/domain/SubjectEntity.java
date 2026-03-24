@@ -18,7 +18,7 @@ public class SubjectEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String code;
 
     @Enumerated(EnumType.STRING)

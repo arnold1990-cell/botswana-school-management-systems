@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../auth/AuthContext';
 import { AppLayout } from '../layout/AppLayout';
 import { Login } from '../pages/Login';
+import { StudentResetPasswordPage } from '../pages/StudentResetPasswordPage';
 import { AccountantDashboardPage, DashboardPage, ParentDashboardPage, StudentDashboardPage, TeacherDashboardPage } from '../pages/Pages';
 import { TeachersPage } from '../pages/TeachersPage';
 import { LearnersPage } from '../pages/LearnersPage';
@@ -17,6 +18,7 @@ export const AppRouter = () => {
     <AuthProvider>
       <Routes>
         <Route path='/login' element={<Login />} />
+        <Route path='/reset-password-request' element={<StudentResetPasswordPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path='/' element={<AppLayout />}>
@@ -30,6 +32,7 @@ export const AppRouter = () => {
             <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
               <Route path='learners' element={<LearnersPage />} />
               <Route path='students' element={<LearnersPage />} />
+              <Route path='students/reset-password' element={<StudentResetPasswordPage />} />
               <Route path='teacher/dashboard' element={<TeacherDashboardPage />} />
               <Route path='subjects' element={<SubjectsPage />} />
               <Route path='marks-entry' element={<MarksEntryPage />} />

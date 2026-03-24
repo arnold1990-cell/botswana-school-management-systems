@@ -43,6 +43,7 @@ export const AppLayout = () => {
           : [
             { to: '/dashboard', label: 'Dashboard' },
             { to: '/students', label: 'Students' },
+            { to: '/students/reset-password', label: 'Students Reset Password' },
             { to: '/subjects', label: 'Subjects' },
             { to: '/marks-entry', label: 'Marks Entry' },
             { to: '/reports', label: 'Reports' },

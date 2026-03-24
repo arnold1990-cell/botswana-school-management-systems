@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 export const Login = () => {
@@ -16,7 +16,12 @@ export const Login = () => {
       return;
     }
 
-    const targetRoute = user.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard';
+    const targetRoute =
+      user.role === 'TEACHER' ? '/teacher/dashboard'
+        : user.role === 'STUDENT' ? '/student/dashboard'
+          : user.role === 'PARENT' ? '/parent/dashboard'
+            : user.role === 'ACCOUNTANT' ? '/accountant/dashboard'
+              : '/dashboard';
     navigate(targetRoute, { replace: true });
   }, [authLoading, navigate, user]);
 
@@ -27,7 +32,12 @@ export const Login = () => {
 
     try {
       const user = await login(email, password);
-      const targetRoute = user.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard';
+      const targetRoute =
+      user.role === 'TEACHER' ? '/teacher/dashboard'
+        : user.role === 'STUDENT' ? '/student/dashboard'
+          : user.role === 'PARENT' ? '/parent/dashboard'
+            : user.role === 'ACCOUNTANT' ? '/accountant/dashboard'
+              : '/dashboard';
       navigate(targetRoute, { replace: true });
     } catch (err) {
       if (import.meta.env.DEV) {
@@ -80,6 +90,9 @@ export const Login = () => {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
           {error && <p className='login-error'>{error}</p>}
+          <p className='muted' style={{ marginTop: 12 }}>
+            <Link to='/reset-password-request'>Forgot student password?</Link>
+          </p>
         </form>
       </section>
     </div>

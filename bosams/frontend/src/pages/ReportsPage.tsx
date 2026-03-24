@@ -17,6 +17,7 @@ export const ReportsPage = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState('');
 
+
   useEffect(() => { (async () => {
     if (!authReady || !isAuthenticated) return;
     try {

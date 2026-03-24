@@ -47,6 +47,7 @@ export const SubjectsPage = () => {
   const [selectedClass, setSelectedClass] = useState<ClassFilter>('ALL');
   const [state, setState] = useState<LoadState>('loading');
 
+
   const filteredClassOptions = useMemo(() => {
     if (level === 'ALL') {
       return classOptions;

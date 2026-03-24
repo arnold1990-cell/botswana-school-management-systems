@@ -3,12 +3,12 @@ import api, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, clearStoredAuth, getAccessTok
 import { User } from '../types/auth';
 
 type Ctx = { user?: User; login: (email: string, password: string) => Promise<User>; logout: () => void };
-type AuthContextValue = Ctx & { loading: boolean; authInitialized: boolean; isAuthenticated: boolean };
+type AuthContextValue = Ctx & { loading: boolean; authReady: boolean; isAuthenticated: boolean };
 const AuthContext = createContext<AuthContextValue>({
   login: async () => { throw new Error('AuthProvider missing'); },
   logout: () => {},
   loading: true,
-  authInitialized: false,
+  authReady: false,
   isAuthenticated: false,
 });
 export const useAuth = () => useContext(AuthContext);
@@ -25,8 +25,7 @@ const parseJwtPayload = (token: string): { exp?: number } | null => {
   }
 };
 
-const hasValidToken = () => {
-  const token = getAccessToken();
+const hasValidToken = (token: string | null) => {
   if (!token) return false;
   const payload = parseJwtPayload(token);
   if (!payload?.exp) return true;
@@ -35,21 +34,21 @@ const hasValidToken = () => {
 
 type LoginResponseShape = {
   accessToken?: string;
-  token?: string;
-  jwt?: string;
   refreshToken?: string;
   user?: User;
 };
 
 const getLoginToken = (responseData: LoginResponseShape): string | null => {
-  const raw = responseData.accessToken ?? responseData.token ?? responseData.jwt;
+  const raw = responseData.accessToken;
   return typeof raw === 'string' && raw.trim().length > 0 ? raw : null;
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User>();
   const [loading, setLoading] = useState(true);
-  const [authInitialized, setAuthInitialized] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(getAccessToken()));
+
   const load = async (): Promise<User> => {
     const r = await api.get('/me');
     setUser(r.data);
@@ -58,28 +57,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const bootstrap = async () => {
+      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
       if (import.meta.env.DEV) {
-        console.info('[auth] bootstrap: token read', {
-          tokenKey: ACCESS_TOKEN_KEY,
-          hasToken: Boolean(getAccessToken()),
-        });
+        console.info('[auth] bootstrap token read', { hasToken: Boolean(token) });
       }
-      if (!hasValidToken()) {
+
+      if (!hasValidToken(token)) {
         clearStoredAuth();
         setUser(undefined);
+        setIsAuthenticated(false);
         setLoading(false);
-        setAuthInitialized(true);
+        setAuthReady(true);
         return;
       }
 
+      setIsAuthenticated(true);
       try {
         await load();
       } catch {
         clearStoredAuth();
         setUser(undefined);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
-        setAuthInitialized(true);
+        setAuthReady(true);
       }
     };
 
@@ -87,32 +88,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
+    clearStoredAuth();
+    sessionStorage.clear();
+
     const r = await api.post('/auth/login', { email, password });
     const loginResponse = (r.data ?? {}) as LoginResponseShape;
-    if (import.meta.env.DEV) {
-      console.info('[auth] login response fields', {
-        hasAccessToken: Boolean(loginResponse.accessToken),
-        hasToken: Boolean(loginResponse.token),
-        hasJwt: Boolean(loginResponse.jwt),
-        hasRefreshToken: Boolean(loginResponse.refreshToken),
-        hasUser: Boolean(loginResponse.user),
-      });
-    }
     const jwtValue = getLoginToken(loginResponse);
     if (jwtValue) {
       localStorage.setItem(ACCESS_TOKEN_KEY, jwtValue);
+      console.log('Token stored:', localStorage.getItem(ACCESS_TOKEN_KEY));
+      setIsAuthenticated(true);
     } else {
       clearStoredAuth();
+      setIsAuthenticated(false);
       throw new Error('Login response did not include an access token');
     }
+
     if (typeof loginResponse.refreshToken === 'string' && loginResponse.refreshToken) {
       localStorage.setItem(REFRESH_TOKEN_KEY, loginResponse.refreshToken);
-    }
-    if (import.meta.env.DEV) {
-      console.info('[auth] after login: token stored', {
-        tokenKey: ACCESS_TOKEN_KEY,
-        hasToken: Boolean(localStorage.getItem(ACCESS_TOKEN_KEY)),
-      });
     }
     if (loginResponse.user) {
       setUser(loginResponse.user);
@@ -124,8 +117,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     clearStoredAuth();
+    sessionStorage.clear();
     setUser(undefined);
+    setIsAuthenticated(false);
   };
 
-  return <AuthContext.Provider value={{ user, login, logout, loading, authInitialized, isAuthenticated: Boolean(user) }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, login, logout, loading, authReady, isAuthenticated }}>{children}</AuthContext.Provider>;
 };

@@ -19,6 +19,7 @@ export const AssignmentsPage = () => {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', dueDate: '', totalMarks: 50 });
 
+
   const loadSetup = async () => {
     const year = (await api.get('/academics/active-year')).data.year;
     const [termRes, subjectRes] = await Promise.all([

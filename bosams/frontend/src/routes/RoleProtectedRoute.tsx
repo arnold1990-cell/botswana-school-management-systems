@@ -15,7 +15,15 @@ export const RoleProtectedRoute = ({ allowedRoles }: { allowedRoles: Role[] }) =
   }
 
   if (!allowedRoles.includes(user.role)) {
-    const fallbackRoute = user.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard';
+    const fallbackRoute = user.role === 'TEACHER'
+      ? '/teacher/dashboard'
+      : user.role === 'STUDENT'
+        ? '/student/dashboard'
+        : user.role === 'PARENT'
+          ? '/parent/dashboard'
+          : user.role === 'ACCOUNTANT'
+            ? '/accountant/dashboard'
+            : '/dashboard';
     return <Navigate to={fallbackRoute} replace />;
   }
 

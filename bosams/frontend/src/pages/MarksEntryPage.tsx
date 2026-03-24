@@ -15,8 +15,11 @@ const gradeOf = (score: number) => score >= 40 ? 'A' : score >= 35 ? 'B' : score
 const toMessage = (error: unknown, fallback: string) => {
   const axiosError = error as AxiosError<{ message?: string }>;
   const status = axiosError.response?.status;
-  if (status === 401 || status === 403) {
-    return 'You are not authorized to load marks setup data. Please sign in again or contact an administrator.';
+  if (status === 401) {
+    return 'Authentication required. Please sign in again.';
+  }
+  if (status === 403) {
+    return 'Access denied. You do not have permission to load marks setup data.';
   }
   return axiosError.response?.data?.message ?? fallback;
 };

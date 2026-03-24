@@ -129,10 +129,12 @@ class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
+        String token = authorizationHeader.substring(7);
+
         try {
-            Claims claims = jwtService.parse(authorizationHeader.substring(7));
+            Claims claims = jwtService.parse(token);
             UUID userId = UUID.fromString(claims.getSubject());
-            log.info("JWT PARSED path={} subject={} roleClaim={}", path, claims.getSubject(), claims.get("role"));
+            log.info("JWT VALID path={} method={} subject={} roleClaim={}", path, request.getMethod(), claims.getSubject(), claims.get("role"));
             userRepository.findById(userId).ifPresentOrElse(u -> {
                 if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {
                     log.warn("INACTIVE USER userId={} path={} status={}", u.getId(), path, u.getStatus());
@@ -142,13 +144,14 @@ class JwtFilter extends OncePerRequestFilter {
                 var authority = new SimpleGrantedAuthority("ROLE_" + u.getRole().name());
                 var authentication = new UsernamePasswordAuthenticationToken(u, null, List.of(authority));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.info("AUTH OK path={} method={} userId={} role={}", path, request.getMethod(), u.getId(), u.getRole());
+                log.info("AUTH OK path={} method={} userId={} email={} role={} authorities={}",
+                        path, request.getMethod(), u.getId(), u.getEmail(), u.getRole(), authentication.getAuthorities());
             }, () -> {
                 log.warn("USER NOT FOUND userId={} path={}", claims.getSubject(), path);
                 SecurityContextHolder.clearContext();
             });
         } catch (JwtException | IllegalArgumentException ex) {
-            log.warn("BAD TOKEN path={} err={}", path, ex.getMessage());
+            log.warn("JWT INVALID path={} method={} reason={}", path, request.getMethod(), ex.getMessage());
             SecurityContextHolder.clearContext();
         }
 

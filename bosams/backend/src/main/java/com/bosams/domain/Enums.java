@@ -5,9 +5,10 @@ public class Enums {
     public enum UserStatus { ACTIVE, INACTIVE }
     public enum Gender { MALE, FEMALE }
     public enum EntityStatus { ACTIVE, INACTIVE }
+    public enum SchoolLevel { PRIMARY, JUNIOR_SECONDARY, SENIOR_SECONDARY }
     public enum ExamStatus { ACTIVE, INACTIVE }
     public enum MarkResult { PASS, FAIL, ABSENT }
-    public enum AssessmentType { CAT, EXAM }
+    public enum AssessmentType { EXERCISE, QUIZ, TEST, PROJECT, MID_TERM, END_OF_TERM_EXAM, ASSIGNMENT, CAT, EXAM }
     public enum GradeLetter { A, B, C, D, E, F }
     public enum MarkEntryStatus { DRAFT, SUBMITTED }
     public enum AttendanceStatus { PRESENT, ABSENT, LATE, HALF_DAY }

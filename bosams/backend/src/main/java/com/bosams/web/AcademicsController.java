@@ -6,6 +6,7 @@ import com.bosams.domain.Enums;
 import com.bosams.domain.Term;
 import com.bosams.repository.AcademicYearRepository;
 import com.bosams.repository.AssessmentTaskRepository;
+import com.bosams.repository.SubjectRepository;
 import com.bosams.repository.TermRepository;
 import com.bosams.service.AcademicsService;
 import jakarta.validation.constraints.NotNull;
@@ -26,12 +27,14 @@ public class AcademicsController {
     private final AcademicYearRepository years;
     private final TermRepository terms;
     private final AssessmentTaskRepository tasks;
+    private final SubjectRepository subjects;
 
-    public AcademicsController(AcademicsService academicsService, AcademicYearRepository years, TermRepository terms, AssessmentTaskRepository tasks) {
+    public AcademicsController(AcademicsService academicsService, AcademicYearRepository years, TermRepository terms, AssessmentTaskRepository tasks, SubjectRepository subjects) {
         this.academicsService = academicsService;
         this.years = years;
         this.terms = terms;
         this.tasks = tasks;
+        this.subjects = subjects;
     }
 
     @PostMapping("/academic-years")
@@ -67,10 +70,35 @@ public class AcademicsController {
 
     @GetMapping("/tasks")
     @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
-    public List<AssessmentTaskEntity> tasks(@RequestParam Long termId) {
-        List<AssessmentTaskEntity> found = tasks.findByTermIdOrderByType(termId);
+    public List<AssessmentTaskEntity> tasks(@RequestParam Long termId,
+                                            @RequestParam(required = false) Integer gradeLevel,
+                                            @RequestParam(required = false) Long subjectId) {
+        List<AssessmentTaskEntity> found = (gradeLevel != null && subjectId != null)
+                ? tasks.findByTermIdAndGradeLevelAndSubjectIdOrderByTypeAscTitleAsc(termId, gradeLevel, subjectId)
+                : tasks.findByTermIdOrderByType(termId);
+        if (found.isEmpty() && gradeLevel != null && subjectId != null) {
+            found = tasks.findByTermIdOrderByType(termId);
+        }
         log.info("Tasks lookup termId={} count={}", termId, found.size());
         return found;
+    }
+
+    @PostMapping("/tasks")
+    @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
+    public AssessmentTaskEntity createTask(@RequestBody CreateTaskRequest request) {
+        Term term = terms.findById(request.termId()).orElseThrow();
+        AssessmentTaskEntity task = new AssessmentTaskEntity();
+        task.setTerm(term);
+        task.setType(request.type());
+        task.setTitle(request.title());
+        task.setDescription(request.description());
+        task.setGradeLevel(request.gradeLevel());
+        task.setDueDate(request.dueDate());
+        task.setMaxScore(request.maxScore() == null ? 50 : request.maxScore());
+        if (request.subjectId() != null) {
+            task.setSubject(subjects.findById(request.subjectId()).orElseThrow());
+        }
+        return tasks.save(task);
     }
 
     @GetMapping("/test-types")
@@ -80,4 +108,5 @@ public class AcademicsController {
     }
 
     public record CreateAcademicYearRequest(@NotNull Integer year) {}
+    public record CreateTaskRequest(Long termId, Long subjectId, Integer gradeLevel, Enums.AssessmentType type, String title, String description, java.time.LocalDate dueDate, Integer maxScore) {}
 }

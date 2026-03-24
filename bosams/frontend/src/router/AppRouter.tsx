@@ -9,7 +9,8 @@ import { LearnersPage } from '../pages/LearnersPage';
 import { SubjectsPage } from '../pages/SubjectsPage';
 import { MarksEntryPage } from '../pages/MarksEntryPage';
 import { ReportsPage } from '../pages/ReportsPage';
-import { AnnouncementsPage, AssignmentsPage, AttendancePage, ExamsPage, FeesPage, HolidaysPage, LibraryPage, MessagesPage, SettingsPage, TimetablePage } from '../pages/BosamsModulePages';
+import { AssignmentsPage } from '../pages/AssignmentsPage';
+import { AnnouncementsPage, AttendancePage, ExamsPage, FeesPage, HolidaysPage, LibraryPage, MessagesPage, SettingsPage, TimetablePage } from '../pages/BosamsModulePages';
 import { ProtectedRoute } from '../routes/ProtectedRoute';
 import { RoleProtectedRoute } from '../routes/RoleProtectedRoute';
 

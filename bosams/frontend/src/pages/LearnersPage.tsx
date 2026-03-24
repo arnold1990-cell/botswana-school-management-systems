@@ -23,6 +23,8 @@ export const LearnersPage = () => {
   const [gradeLevel, setGradeLevel] = useState('ALL');
   const [query, setQuery] = useState('');
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     admissionNo: '',
     firstName: '',
@@ -37,12 +39,21 @@ export const LearnersPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = async (grade?: string, q?: string) => {
+    setLoading(true);
+    setError('');
     const params = {
       ...(grade && grade !== 'ALL' ? { gradeLevel: Number(grade) } : {}),
       ...(q && q.trim().length > 0 ? { query: q.trim() } : {}),
     };
-    const res = await api.get('/students', { params });
-    setLearners(res.data);
+    try {
+      const res = await api.get('/learners', { params });
+      setLearners(res.data ?? []);
+    } catch {
+      setLearners([]);
+      setError('Could not load learners. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -51,7 +62,7 @@ export const LearnersPage = () => {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    await api.post('/learners', form);
+    await api.post('/learners', { ...form, schoolId: 1 });
     setMessage('Learner admission saved successfully.');
     setForm({ ...form, admissionNo: '', firstName: '', lastName: '', guardianName: '', guardianPhone: '', guardianEmail: '' });
     await load(gradeLevel, query);
@@ -106,6 +117,7 @@ export const LearnersPage = () => {
     </form>}
 
     <div className='card'>
+      {error && <p className='muted'>{error}</p>}
       <div className='toolbar'>
         <label>Grade
           <select value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)}>
@@ -116,7 +128,8 @@ export const LearnersPage = () => {
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder='Search by admission, name, guardian, category' />
         <button className='btn btn-secondary' onClick={() => load(gradeLevel, query)}>Search</button>
       </div>
-      <table className='table'>
+      {loading && <p>Loading learners...</p>}
+      {!loading && <table className='table'>
         <thead><tr><th>Admission</th><th>Name</th><th>Grade</th><th>Roll No.</th><th>Category</th><th>Guardian</th><th>Action</th></tr></thead>
         <tbody>{learners.map(l => {
           const editable = editingId === l.id;
@@ -143,8 +156,8 @@ export const LearnersPage = () => {
                 : <button className='btn btn-secondary' onClick={() => setEditingId(l.id)}>Edit</button>)}
             </td></tr>;
         })}</tbody>
-      </table>
-      {learners.length === 0 && <p>No learners found for selected filters.</p>}
+      </table>}
+      {!loading && learners.length === 0 && <p>No learners found for selected filters.</p>}
     </div>
   </section>;
 };

@@ -73,6 +73,7 @@ public class AcademicsService {
                 AssessmentTaskEntity task = new AssessmentTaskEntity();
                 task.setTerm(savedTerm);
                 task.setType(type);
+                task.setTitle(type == Enums.AssessmentType.CAT ? "Continuous Assessment Test" : "End-of-term Exam");
                 task.setMaxScore(50);
                 tasks.save(task);
             }
@@ -92,10 +93,11 @@ public class AcademicsService {
             });
 
             for (Enums.AssessmentType type : List.of(Enums.AssessmentType.CAT, Enums.AssessmentType.EXAM)) {
-                tasks.findByTermIdAndType(term.getId(), type).orElseGet(() -> {
+                tasks.findByTermIdAndGradeLevelAndSubjectIdAndType(term.getId(), null, null, type).orElseGet(() -> {
                     AssessmentTaskEntity task = new AssessmentTaskEntity();
                     task.setTerm(term);
                     task.setType(type);
+                    task.setTitle(type == Enums.AssessmentType.CAT ? "Continuous Assessment Test" : "End-of-term Exam");
                     task.setMaxScore(50);
                     return tasks.save(task);
                 });

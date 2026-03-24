@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type Learner = {
   id: number;
@@ -21,6 +22,7 @@ type StudentCategory = { id: number; name: string };
 
 export const LearnersPage = () => {
   const { user } = useAuth();
+  const { authReady, authLoading } = useAuthReady();
   const [learners, setLearners] = useState<Learner[]>([]);
   const [gradeLevel, setGradeLevel] = useState('ALL');
   const [query, setQuery] = useState('');
@@ -60,14 +62,16 @@ export const LearnersPage = () => {
   };
 
   useEffect(() => {
+    if (!authReady) return;
     load(gradeLevel, query);
-  }, [gradeLevel]);
+  }, [authReady, gradeLevel]);
 
   useEffect(() => {
+    if (!authReady) return;
     api.get<StudentCategory[]>('/student-categories')
       .then((response) => setCategories(response.data ?? []))
       .catch(() => setCategories([]));
-  }, []);
+  }, [authReady]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -163,7 +167,7 @@ export const LearnersPage = () => {
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder='Search by admission, name, guardian, category' />
         <button className='btn btn-secondary' onClick={() => load(gradeLevel, query)}>Search</button>
       </div>
-      {loading && <p>Loading learners...</p>}
+      {(authLoading || loading) && <p>Loading learners...</p>}
       {!loading && <table className='table'>
         <thead><tr><th>Admission</th><th>Name</th><th>Grade</th><th>Roll No.</th><th>Category</th><th>Guardian</th><th>Action</th></tr></thead>
         <tbody>{learners.map(l => {

@@ -1,55 +1,33 @@
 import axios from 'axios';
 
-export const ACCESS_TOKEN_KEY = 'bosams_access_token';
+export const ACCESS_TOKEN_KEY = 'accessToken';
 export const REFRESH_TOKEN_KEY = 'bosams_refresh_token';
-const LEGACY_ACCESS_TOKEN_KEYS = ['accessToken', 'token'];
+const LEGACY_ACCESS_TOKEN_KEYS = ['token', 'jwt', 'authToken', 'session token'];
 const LEGACY_REFRESH_TOKEN_KEYS = ['refreshToken'];
 
-type BrowserStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-type StorageType = 'localStorage' | 'sessionStorage';
-type StorageLookup = { storage: BrowserStorage; storageType: StorageType };
-type TokenLookup = { token: string | null; key: string | null; storageType: StorageType | null };
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
-
-const storageLookups: StorageLookup[] = [
-  { storage: localStorage, storageType: 'localStorage' },
-  { storage: sessionStorage, storageType: 'sessionStorage' },
-];
-
 const allAccessTokenKeys = [ACCESS_TOKEN_KEY, ...LEGACY_ACCESS_TOKEN_KEYS];
 const allRefreshTokenKeys = [REFRESH_TOKEN_KEY, ...LEGACY_REFRESH_TOKEN_KEYS];
 
-const readStoredToken = (primaryKey: string, legacyKeys: string[] = []): TokenLookup => {
-  for (const { storage, storageType } of storageLookups) {
-    const primary = storage.getItem(primaryKey);
-    if (primary) {
-      return { token: primary, key: primaryKey, storageType };
-    }
-  }
-
+const migrateLegacyToken = (primaryKey: string, legacyKeys: string[] = []) => {
   for (const key of legacyKeys) {
-    for (const { storage, storageType } of storageLookups) {
-      const legacy = storage.getItem(key);
-      if (legacy) {
-        // Migrate legacy token to the canonical key in localStorage.
-        localStorage.setItem(primaryKey, legacy);
-        storage.removeItem(key);
-        return { token: legacy, key, storageType };
-      }
+    const legacy = localStorage.getItem(key);
+    if (legacy) {
+      localStorage.setItem(primaryKey, legacy);
+      localStorage.removeItem(key);
+      return;
     }
   }
-
-  return { token: null, key: null, storageType: null };
 };
 
-export const getAccessToken = (): string | null => readStoredToken(ACCESS_TOKEN_KEY, LEGACY_ACCESS_TOKEN_KEYS).token;
-export const getRefreshToken = (): string | null => readStoredToken(REFRESH_TOKEN_KEY, LEGACY_REFRESH_TOKEN_KEYS).token;
+migrateLegacyToken(ACCESS_TOKEN_KEY, LEGACY_ACCESS_TOKEN_KEYS);
+migrateLegacyToken(REFRESH_TOKEN_KEY, LEGACY_REFRESH_TOKEN_KEYS);
+
+export const getAccessToken = (): string | null => localStorage.getItem(ACCESS_TOKEN_KEY);
+export const getRefreshToken = (): string | null => localStorage.getItem(REFRESH_TOKEN_KEY);
 
 const clearStoredKeys = (keys: string[]) => {
-  for (const { storage } of storageLookups) {
-    keys.forEach((key) => storage.removeItem(key));
-  }
+  keys.forEach((key) => localStorage.removeItem(key));
 };
 
 export const clearStoredAuth = () => {
@@ -75,9 +53,9 @@ type RetriableRequestConfig = {
 };
 
 const refreshAccessToken = async (): Promise<string | null> => {
-  const refreshTokenInfo = readStoredToken(REFRESH_TOKEN_KEY, LEGACY_REFRESH_TOKEN_KEYS);
+  const refreshToken = getRefreshToken();
 
-  if (!refreshTokenInfo.token) {
+  if (!refreshToken) {
     if (import.meta.env.DEV) {
       console.info('[api] refresh skipped', { reason: 'missing_refresh_token' });
     }
@@ -85,7 +63,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
   }
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken: refreshTokenInfo.token }, {
+    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken }, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -108,24 +86,20 @@ const refreshAccessToken = async (): Promise<string | null> => {
 };
 
 api.interceptors.request.use((config) => {
-  const tokenInfo = readStoredToken(ACCESS_TOKEN_KEY, LEGACY_ACCESS_TOKEN_KEYS);
+  const token = getAccessToken();
   const requestUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
   config.headers = config.headers || {};
   config.headers['Content-Type'] = 'application/json';
 
   let attachedAuthorization = false;
-  if (tokenInfo.token) {
-    config.headers.Authorization = `Bearer ${tokenInfo.token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
     attachedAuthorization = true;
   }
 
-  console.info('[api] request', {
-    url: requestUrl,
-    hasToken: Boolean(tokenInfo.token),
-    tokenStorageKey: tokenInfo.key,
-    tokenStorageType: tokenInfo.storageType,
-    attachedAuthorization,
-  });
+  console.info('[api] before request token present', Boolean(token));
+  console.info('[api] before request Authorization header attached', attachedAuthorization);
+  console.info('[api] request', { url: requestUrl });
   return config;
 });
 
@@ -138,15 +112,8 @@ api.interceptors.response.use(
   async (error) => {
     const status = error.response?.status;
     const requestUrl = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
-    const tokenInfo = readStoredToken(ACCESS_TOKEN_KEY, LEGACY_ACCESS_TOKEN_KEYS);
     const originalRequest = error.config as typeof error.config & RetriableRequestConfig;
-    console.info('[api] response', {
-      url: requestUrl,
-      status: status ?? 0,
-      hasToken: Boolean(tokenInfo.token),
-      tokenStorageKey: tokenInfo.key,
-      tokenStorageType: tokenInfo.storageType,
-    });
+    console.info('[api] response', { url: requestUrl, status: status ?? 0 });
 
     if (status === 401 && originalRequest && !originalRequest._skipAuthRedirect && !originalRequest._retry && !requestUrl.endsWith('/auth/login') && !requestUrl.endsWith('/auth/refresh')) {
       originalRequest._retry = true;

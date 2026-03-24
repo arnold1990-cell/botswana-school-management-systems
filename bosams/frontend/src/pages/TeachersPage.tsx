@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type Teacher = { id: string; fullName: string; email: string };
 type Subject = { id: number; name: string };
@@ -10,6 +11,7 @@ type Assignment = { id: number; teacher: Teacher; gradeLevel: number; subject: S
 
 export const TeachersPage = () => {
   const { user } = useAuth();
+  const { authReady, authLoading } = useAuthReady();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [yearId, setYearId] = useState<number>();
@@ -31,7 +33,10 @@ export const TeachersPage = () => {
     setAssignmentForm((prev) => ({ ...prev, subjectId: subjectRes.data[0]?.id ?? 0, teacherUserId: teacherRes.data[0]?.id ?? '' }));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authReady) return;
+    load();
+  }, [authReady]);
 
   const createTeacher = async (event: FormEvent) => {
     event.preventDefault();
@@ -51,6 +56,7 @@ export const TeachersPage = () => {
 
   return <section>
     <h2>Teacher Management</h2>
+    {authLoading && <p className='muted'>Loading authentication…</p>}
     {canManageTeachers && <form className='card form-grid' onSubmit={createTeacher}>
       <h3>Create Teacher</h3>
       <input value={teacherForm.fullName} onChange={(e)=>setTeacherForm({...teacherForm, fullName: e.target.value})} placeholder='Full name' required />

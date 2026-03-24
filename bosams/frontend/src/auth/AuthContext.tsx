@@ -7,6 +7,26 @@ type AuthContextValue = Ctx & { loading: boolean };
 const AuthContext = createContext<AuthContextValue>({ login: async () => { throw new Error('AuthProvider missing'); }, logout: () => {}, loading: true });
 export const useAuth = () => useContext(AuthContext);
 
+const parseJwtPayload = (token: string): { exp?: number } | null => {
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(atob(base64).split('').map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`).join(''));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
+
+const hasValidToken = () => {
+  const token = getAccessToken();
+  if (!token) return false;
+  const payload = parseJwtPayload(token);
+  if (!payload?.exp) return true;
+  return payload.exp * 1000 > Date.now();
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User>();
   const [loading, setLoading] = useState(true);
@@ -18,7 +38,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const bootstrap = async () => {
-      if (!getAccessToken()) {
+      if (!hasValidToken()) {
+        clearStoredAuth();
+        setUser(undefined);
         setLoading(false);
         return;
       }
@@ -38,8 +60,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (email: string, password: string): Promise<User> => {
     const r = await api.post('/auth/login', { email, password });
-    if (typeof r.data?.accessToken === 'string' && r.data.accessToken) {
-      localStorage.setItem(ACCESS_TOKEN_KEY, r.data.accessToken);
+    const jwtValue = typeof r.data?.accessToken === 'string' && r.data.accessToken ? r.data.accessToken : null;
+    if (jwtValue) {
+      localStorage.setItem('accessToken', jwtValue);
     } else {
       clearStoredAuth();
       throw new Error('Login response did not include an access token');
@@ -48,13 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem(REFRESH_TOKEN_KEY, r.data.refreshToken);
     }
     if (import.meta.env.DEV) {
-      console.info('[auth] login success', {
-        accessTokenStorageKey: ACCESS_TOKEN_KEY,
-        refreshTokenStorageKey: REFRESH_TOKEN_KEY,
-        hasAccessTokenInStorage: Boolean(localStorage.getItem(ACCESS_TOKEN_KEY) || sessionStorage.getItem(ACCESS_TOKEN_KEY)),
-        hasRefreshTokenInStorage: Boolean(localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY)),
-        loginRole: r.data?.user?.role,
-      });
+      console.info('[auth] after login: token stored', Boolean(localStorage.getItem(ACCESS_TOKEN_KEY)));
     }
     return load();
   };

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuthReady } from '../auth/useAuthReady';
 import { getSubjects, Subject, SubjectLevel, SubjectServiceError } from '../services/subjectService';
 
 type LevelFilter = 'ALL' | SubjectLevel;
@@ -40,6 +41,7 @@ const mapStateFromError = (error: unknown): LoadState => {
 };
 
 export const SubjectsPage = () => {
+  const { authReady, authLoading } = useAuthReady();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [level, setLevel] = useState<LevelFilter>('ALL');
   const [selectedClass, setSelectedClass] = useState<ClassFilter>('ALL');
@@ -69,6 +71,7 @@ export const SubjectsPage = () => {
   }, [level, selectedClass]);
 
   useEffect(() => {
+    if (!authReady) return;
     const selectedOption = classOptions.find((option) => option.value === selectedClass);
     const grade = selectedOption?.grade;
     const requestLevel = level !== 'ALL' ? level : selectedOption?.level;
@@ -87,7 +90,7 @@ export const SubjectsPage = () => {
     };
 
     loadSubjects();
-  }, [level, selectedClass]);
+  }, [authReady, level, selectedClass]);
 
   return <section>
     <h2>Subjects</h2>
@@ -109,7 +112,7 @@ export const SubjectsPage = () => {
         </label>
       </div>
 
-      {state === 'loading' && <p>Loading subjects...</p>}
+      {(authLoading || state === 'loading') && <p>Loading subjects...</p>}
       {state === 'authError' && <p className='muted'>Authentication required. Please sign in again.</p>}
       {state === 'accessDenied' && <p className='muted'>Access denied.</p>}
       {state === 'serverError' && <p className='muted'>Unable to load subjects right now.</p>}

@@ -101,6 +101,22 @@ test('subjects page shows error state and retry button when api fails', async ({
   await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
 });
 
+
+
+test('subjects page does not map non-401 responses to authentication required', async ({ page }) => {
+  await page.route('**/api/subjects*', async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 'UNAUTHORIZED', message: 'Subject service unavailable' }),
+    });
+  });
+
+  await page.goto('/subjects');
+
+  await expect(page.getByText('Authentication required. Please sign in again.')).toHaveCount(0);
+  await expect(page.getByText('Subject service unavailable')).toBeVisible();
+});
 test('subjects page maps 401 to authentication required message', async ({ page }) => {
   await page.route('**/api/subjects*', async (route) => {
     await route.fulfill({

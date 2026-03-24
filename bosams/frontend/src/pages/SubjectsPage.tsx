@@ -24,13 +24,12 @@ type ApiErrorPayload = { message?: string; code?: string };
 const toErrorMessage = (error: unknown) => {
   const axiosError = error as AxiosError<ApiErrorPayload>;
   const status = axiosError.response?.status;
-  const code = axiosError.response?.data?.code;
 
-  if (status === 401 || code === 'UNAUTHORIZED') {
+  if (status === 401) {
     return 'Authentication required. Please sign in again.';
   }
 
-  if (status === 403 || code === 'FORBIDDEN') {
+  if (status === 403) {
     return 'Access denied. You do not have permission to view subjects.';
   }
 

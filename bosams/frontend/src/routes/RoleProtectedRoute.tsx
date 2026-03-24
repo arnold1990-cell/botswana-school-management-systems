@@ -1,16 +1,18 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { getAccessToken } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Role } from '../types/auth';
 
 export const RoleProtectedRoute = ({ allowedRoles }: { allowedRoles: Role[] }) => {
   const { user, loading } = useAuth();
+  const accessToken = getAccessToken();
   const location = useLocation();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (!user) {
+  if (!accessToken || !user) {
     return <Navigate to='/login' replace state={{ from: location }} />;
   }
 

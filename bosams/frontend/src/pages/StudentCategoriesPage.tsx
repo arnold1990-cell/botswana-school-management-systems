@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import api from '../api/client';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type StudentCategory = {
   id: number;
@@ -7,6 +8,7 @@ type StudentCategory = {
 };
 
 export const StudentCategoriesPage = () => {
+  const { authReady, authLoading } = useAuthReady();
   const [categories, setCategories] = useState<StudentCategory[]>([]);
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -24,7 +26,10 @@ export const StudentCategoriesPage = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authReady) return;
+    load();
+  }, [authReady]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -67,6 +72,7 @@ export const StudentCategoriesPage = () => {
       </div>
       {message && <p className='muted'>{message}</p>}
       {error && <p className='muted'>{error}</p>}
+      {authLoading && <p className='muted'>Loading authentication…</p>}
 
       <form className='card form-grid form-grid-3' onSubmit={submit}>
         <input placeholder='Category name' value={name} onChange={(e) => setName(e.target.value)} required />

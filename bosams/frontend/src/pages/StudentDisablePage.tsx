@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type Learner = {
   id: number;
@@ -11,6 +12,7 @@ type Learner = {
 };
 
 export const StudentDisablePage = () => {
+  const { authReady, authLoading } = useAuthReady();
   const [students, setStudents] = useState<Learner[]>([]);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -26,7 +28,10 @@ export const StudentDisablePage = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authReady) return;
+    load();
+  }, [authReady]);
 
   const reactivate = async (id: number) => {
     try {
@@ -49,6 +54,7 @@ export const StudentDisablePage = () => {
       </div>
       {message && <p className='muted'>{message}</p>}
       {error && <p className='muted'>{error}</p>}
+      {authLoading && <p className='muted'>Loading authentication…</p>}
 
       <article className='card'>
         <h3>Disabled Students</h3>

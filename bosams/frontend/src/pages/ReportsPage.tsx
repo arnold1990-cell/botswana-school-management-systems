@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type Subject = { id: number; name: string };
 type Term = { id: number; termNo: number };
 type Row = { learnerName: string; catScore?: number; examScore?: number; total: number; finalGrade: string };
 
 export const ReportsPage = () => {
+  const { authReady, authLoading } = useAuthReady();
   const [year, setYear] = useState<number>();
   const [termNumber, setTermNumber] = useState(1);
   const [terms, setTerms] = useState<Term[]>([]);
@@ -16,6 +18,7 @@ export const ReportsPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => { (async () => {
+    if (!authReady) return;
     try {
       const y = (await api.get('/academic-years/current')).data.year;
       setYear(y);
@@ -30,7 +33,7 @@ export const ReportsPage = () => {
     } catch {
       setError('Failed to load reports setup.');
     }
-  })(); }, []);
+  })(); }, [authReady]);
 
   const load = async () => {
     if (!year || !subjectId) return;
@@ -46,6 +49,7 @@ export const ReportsPage = () => {
 
   return <section>
     <h2>Reports</h2>
+    {authLoading && <p>Loading authentication…</p>}
     {error && <p className='muted'>{error}</p>}
     <article className='card form-grid'>
       <label>Year <input value={year ?? ''} disabled /></label>

@@ -2,6 +2,7 @@ import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type AcademicYear = { year: number };
 type Term = { id: number; termNo: number };
@@ -26,6 +27,7 @@ const toMessage = (error: unknown, fallback: string) => {
 
 export const MarksEntryPage = () => {
   const { user } = useAuth();
+  const { authReady, authLoading } = useAuthReady();
   const [year, setYear] = useState<number>();
   const [terms, setTerms] = useState<Term[]>([]);
   const [termId, setTermId] = useState<number>();
@@ -42,6 +44,7 @@ export const MarksEntryPage = () => {
   const [saveMessage, setSaveMessage] = useState<string>('');
 
   useEffect(() => { (async () => {
+    if (!authReady) return;
     try {
       setLoadError('');
       const yr: AcademicYear = (await api.get('/academics/active-year')).data;
@@ -65,10 +68,10 @@ export const MarksEntryPage = () => {
     } catch (error) {
       setLoadError(toMessage(error, 'Failed to load active year/terms/tasks setup data.'));
     }
-  })(); }, []);
+  })(); }, [authReady]);
 
   useEffect(() => {
-    if (!termId) return;
+    if (!authReady || !termId) return;
     api.get('/tasks', { params: { termId, gradeLevel, subjectId } })
       .then((r) => {
         setTasks(r.data);
@@ -78,9 +81,10 @@ export const MarksEntryPage = () => {
         }
       })
       .catch((error) => setLoadError(toMessage(error, 'Failed to load tasks for selected term.')));
-  }, [termId, gradeLevel, subjectId]);
+  }, [authReady, termId, gradeLevel, subjectId]);
 
   useEffect(() => {
+    if (!authReady) return;
     api.get('/subjects', { params: { grade: gradeLevel } })
       .then((r) => {
         setSubjects(r.data);
@@ -90,14 +94,15 @@ export const MarksEntryPage = () => {
         }
       })
       .catch((error) => setLoadError(toMessage(error, 'Failed to load subjects.')));
-  }, [gradeLevel]);
+  }, [authReady, gradeLevel]);
 
   useEffect(() => {
+    if (!authReady) return;
     api.get('/learners', { params: { gradeLevel } }).then((r)=>setLearners(r.data));
-  }, [gradeLevel]);
+  }, [authReady, gradeLevel]);
 
   useEffect(() => {
-    if (!subjectId || !taskId) return;
+    if (!authReady || !subjectId || !taskId) return;
     api.get('/marks/status', { params: { subjectId, taskId, gradeLevel } }).then((r) => setStatus(r.data.status));
     api.get('/marks', { params: { subjectId, taskId, gradeLevel } }).then((r) => {
       const entries = r.data as MarkEntry[];
@@ -108,7 +113,7 @@ export const MarksEntryPage = () => {
       setScores(prefill);
       console.info('[marks] list', { subjectId, taskId, gradeLevel, rows: entries.length });
     });
-  }, [subjectId, taskId, gradeLevel]);
+  }, [authReady, subjectId, taskId, gradeLevel]);
 
   const rows = useMemo(()=>learners.map(l => ({...l, score: scores[l.id] ?? 0})), [learners, scores]);
 
@@ -141,6 +146,7 @@ export const MarksEntryPage = () => {
 
   return <section>
     <h2>Marks Entry</h2>
+    {authLoading && <p>Loading authentication…</p>}
     {loadError && <p>{loadError}</p>}
     {saveMessage && <p>{saveMessage}</p>}
     {locked && <p>Submitted/Locked</p>}

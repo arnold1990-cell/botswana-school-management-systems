@@ -121,9 +121,11 @@ class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        boolean hasAuthorizationHeader = authorizationHeader != null;
+        boolean hasBearerPrefix = hasAuthorizationHeader && authorizationHeader.startsWith("Bearer ");
         log.info("JWT FILTER path={} method={} hasAuthorizationHeader={} hasBearerPrefix={}",
-                path, request.getMethod(), authorizationHeader != null, authorizationHeader != null && authorizationHeader.startsWith("Bearer "));
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+                path, request.getMethod(), hasAuthorizationHeader, hasBearerPrefix);
+        if (!hasAuthorizationHeader || !hasBearerPrefix) {
             log.debug("NO TOKEN path={} method={}", path, request.getMethod());
             filterChain.doFilter(request, response);
             return;
@@ -133,6 +135,7 @@ class JwtFilter extends OncePerRequestFilter {
 
         try {
             Claims claims = jwtService.parse(token);
+            log.info("JWT parsed successfully={}", true);
             UUID userId = UUID.fromString(claims.getSubject());
             log.info("JWT VALID path={} method={} subject={} roleClaim={}", path, request.getMethod(), claims.getSubject(), claims.get("role"));
             userRepository.findById(userId).ifPresentOrElse(u -> {
@@ -146,11 +149,13 @@ class JwtFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 log.info("AUTH OK path={} method={} userId={} email={} role={} authorities={}",
                         path, request.getMethod(), u.getId(), u.getEmail(), u.getRole(), authentication.getAuthorities());
+                log.info("authenticated username={} role={}", u.getEmail(), u.getRole());
             }, () -> {
                 log.warn("USER NOT FOUND userId={} path={}", claims.getSubject(), path);
                 SecurityContextHolder.clearContext();
             });
         } catch (JwtException | IllegalArgumentException ex) {
+            log.info("JWT parsed successfully={}", false);
             log.warn("JWT INVALID path={} method={} reason={}", path, request.getMethod(), ex.getMessage());
             SecurityContextHolder.clearContext();
         }

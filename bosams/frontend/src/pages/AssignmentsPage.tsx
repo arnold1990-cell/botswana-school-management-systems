@@ -1,11 +1,13 @@
 import { FormEvent, useEffect, useState } from 'react';
 import api from '../api/client';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type Term = { id: number; termNo: number };
 type Subject = { id: number; name: string };
 type Assignment = { id: number; title: string; description?: string; dueDate?: string; maxScore: number; gradeLevel?: number; type: string; subject?: Subject };
 
 export const AssignmentsPage = () => {
+  const { authReady, authLoading } = useAuthReady();
   const [terms, setTerms] = useState<Term[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [termId, setTermId] = useState<number>();
@@ -45,12 +47,14 @@ export const AssignmentsPage = () => {
   };
 
   useEffect(() => {
+    if (!authReady) return;
     loadSetup().catch(() => setError('Failed to load assignment setup.'));
-  }, [gradeLevel]);
+  }, [authReady, gradeLevel]);
 
   useEffect(() => {
+    if (!authReady) return;
     loadAssignments(termId, subjectId);
-  }, [termId, subjectId, gradeLevel]);
+  }, [authReady, termId, subjectId, gradeLevel]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -77,6 +81,7 @@ export const AssignmentsPage = () => {
 
   return <section>
     <h2>Assignments</h2>
+    {authLoading && <p>Loading authentication…</p>}
     {message && <p className='muted'>{message}</p>}
     {error && <p className='muted'>{error}</p>}
 

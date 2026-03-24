@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
+import { useAuthReady } from '../auth/useAuthReady';
 
 const metricCards = [
   { label: 'Students', value: '2,148', trend: '+4.2%' },
@@ -36,15 +37,18 @@ export const DashboardPage = () => (
 );
 
 export const TeacherDashboardPage = () => {
+  const { authReady, authLoading } = useAuthReady();
   const [assignments, setAssignments] = useState<any[]>([]);
 
   useEffect(() => {
+    if (!authReady) return;
     api.get('/teacher/my-assignments').then((res) => setAssignments(res.data));
-  }, []);
+  }, [authReady]);
 
   return (
     <section>
       <PageHeader title='Teacher Dashboard' subtitle='Track your assigned grades and subjects.' actionLabel='My Assignments' />
+      {authLoading && <p className='muted'>Loading authentication…</p>}
       <article className='card'>
         <h3>My Assignments</h3>
         <table className='table'>

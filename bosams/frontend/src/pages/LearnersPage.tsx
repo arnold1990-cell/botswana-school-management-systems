@@ -17,6 +17,8 @@ type Learner = {
   status: 'ACTIVE' | 'INACTIVE';
 };
 
+type StudentCategory = { id: number; name: string };
+
 export const LearnersPage = () => {
   const { user } = useAuth();
   const [learners, setLearners] = useState<Learner[]>([]);
@@ -37,6 +39,7 @@ export const LearnersPage = () => {
     guardianEmail: '',
   });
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [categories, setCategories] = useState<StudentCategory[]>([]);
 
   const load = async (grade?: string, q?: string) => {
     setLoading(true);
@@ -60,35 +63,63 @@ export const LearnersPage = () => {
     load(gradeLevel, query);
   }, [gradeLevel]);
 
+  useEffect(() => {
+    api.get<StudentCategory[]>('/student-categories')
+      .then((response) => setCategories(response.data ?? []))
+      .catch(() => setCategories([]));
+  }, []);
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    await api.post('/learners', { ...form, schoolId: 1 });
-    setMessage('Learner admission saved successfully.');
-    setForm({ ...form, admissionNo: '', firstName: '', lastName: '', guardianName: '', guardianPhone: '', guardianEmail: '' });
-    await load(gradeLevel, query);
+    setError('');
+    setMessage('');
+    try {
+      await api.post('/learners', { ...form, schoolId: 1 });
+      setMessage('Learner admission saved successfully.');
+      setForm({ ...form, admissionNo: '', firstName: '', lastName: '', guardianName: '', guardianPhone: '', guardianEmail: '' });
+      await load(gradeLevel, query);
+    } catch {
+      setError('Unable to save learner admission. Please verify required fields and try again.');
+    }
   };
 
   const updateLearner = async (learner: Learner) => {
-    await api.put(`/learners/${learner.id}`, {
-      firstName: learner.firstName,
-      lastName: learner.lastName,
-      gender: learner.gender,
-      gradeLevel: learner.gradeLevel,
-      studentCategory: learner.studentCategory,
-      guardianName: learner.guardianName,
-      guardianPhone: learner.guardianPhone,
-      guardianEmail: learner.guardianEmail,
-      status: learner.status,
-    });
-    setEditingId(null);
-    setMessage('Learner profile updated.');
-    await load(gradeLevel, query);
+    setError('');
+    try {
+      await api.put(`/learners/${learner.id}`, {
+        firstName: learner.firstName,
+        lastName: learner.lastName,
+        gender: learner.gender,
+        gradeLevel: learner.gradeLevel,
+        studentCategory: learner.studentCategory,
+        guardianName: learner.guardianName,
+        guardianPhone: learner.guardianPhone,
+        guardianEmail: learner.guardianEmail,
+        status: learner.status,
+      });
+      setEditingId(null);
+      setMessage('Learner profile updated.');
+      await load(gradeLevel, query);
+    } catch {
+      setError('Unable to update learner profile.');
+    }
   };
 
   const assignRoll = async (learner: Learner, rollNumber: number) => {
     await api.patch(`/learners/${learner.id}/roll-number`, { rollNumber });
     setMessage(`Roll number #${rollNumber} assigned for ${learner.firstName}.`);
     await load(gradeLevel, query);
+  };
+
+  const disableLearner = async (learnerId: number) => {
+    try {
+      setError('');
+      await api.patch(`/learners/${learnerId}/status`, { status: 'INACTIVE' });
+      setMessage('Learner disabled successfully.');
+      await load(gradeLevel, query);
+    } catch {
+      setError('Unable to disable learner.');
+    }
   };
 
   return <section>
@@ -107,7 +138,11 @@ export const LearnersPage = () => {
       <input placeholder='Last Name' value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
       <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}><option>MALE</option><option>FEMALE</option></select>
       <select value={form.gradeLevel} onChange={(e) => setForm({ ...form, gradeLevel: Number(e.target.value) })}>{[1, 2, 3, 4, 5, 6, 7].map(g => <option key={g} value={g}>Grade {g}</option>)}</select>
-      <input placeholder='Student Category' value={form.studentCategory} onChange={(e) => setForm({ ...form, studentCategory: e.target.value })} />
+      <select value={form.studentCategory} onChange={(e) => setForm({ ...form, studentCategory: e.target.value })}>
+        {(categories.length > 0 ? categories : [{ id: 0, name: 'General' }]).map((category) => (
+          <option key={category.id || category.name} value={category.name}>{category.name}</option>
+        ))}
+      </select>
       <input placeholder='Guardian Name' value={form.guardianName} onChange={(e) => setForm({ ...form, guardianName: e.target.value })} />
       <input placeholder='Guardian Phone' value={form.guardianPhone} onChange={(e) => setForm({ ...form, guardianPhone: e.target.value })} />
       <input placeholder='Guardian Email' type='email' value={form.guardianEmail} onChange={(e) => setForm({ ...form, guardianEmail: e.target.value })} />
@@ -153,7 +188,10 @@ export const LearnersPage = () => {
             <td>
               {(user?.role === 'ADMIN' || user?.role === 'PRINCIPAL') && (editable
                 ? <button className='btn btn-primary' onClick={() => updateLearner(l)}>Save</button>
-                : <button className='btn btn-secondary' onClick={() => setEditingId(l.id)}>Edit</button>)}
+                : <>
+                  <button className='btn btn-secondary' onClick={() => setEditingId(l.id)}>Edit</button>{' '}
+                  <button className='btn btn-secondary' onClick={() => disableLearner(l.id)}>Disable</button>
+                </>)}
             </td></tr>;
         })}</tbody>
       </table>}

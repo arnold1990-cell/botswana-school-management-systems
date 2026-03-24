@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +87,15 @@ public class LearnersController {
         return StudentDto.from(updated);
     }
 
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL')")
+    public StudentDto updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusRequest req) {
+        StudentEntity learner = learners.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Learner not found"));
+        learner.setStatus(req.status());
+        return StudentDto.from(learners.save(learner));
+    }
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
     public List<StudentDto> list(@AuthenticationPrincipal UserEntity user,
@@ -151,4 +161,5 @@ public class LearnersController {
     ) {}
 
     public record AssignRollNumberRequest(@Min(1) @Max(99) Integer rollNumber) {}
+    public record UpdateStatusRequest(@NotNull Enums.EntityStatus status) {}
 }

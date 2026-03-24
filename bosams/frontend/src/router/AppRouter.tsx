@@ -11,6 +11,8 @@ import { MarksEntryPage } from '../pages/MarksEntryPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { AssignmentsPage } from '../pages/AssignmentsPage';
 import { AnnouncementsPage, AttendancePage, ExamsPage, FeesPage, HolidaysPage, LibraryPage, MessagesPage, SettingsPage, TimetablePage } from '../pages/BosamsModulePages';
+import { StudentCategoriesPage } from '../pages/StudentCategoriesPage';
+import { StudentDisablePage } from '../pages/StudentDisablePage';
 import { ProtectedRoute } from '../routes/ProtectedRoute';
 import { RoleProtectedRoute } from '../routes/RoleProtectedRoute';
 
@@ -33,6 +35,10 @@ export const AppRouter = () => {
             <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
               <Route path='learners' element={<LearnersPage />} />
               <Route path='students' element={<LearnersPage />} />
+              <Route path='students/admission' element={<LearnersPage />} />
+              <Route path='students/details' element={<LearnersPage />} />
+              <Route path='students/disable' element={<StudentDisablePage />} />
+              <Route path='students/category' element={<StudentCategoriesPage />} />
               <Route path='students/reset-password' element={<StudentResetPasswordPage />} />
               <Route path='teacher/dashboard' element={<TeacherDashboardPage />} />
               <Route path='subjects' element={<SubjectsPage />} />

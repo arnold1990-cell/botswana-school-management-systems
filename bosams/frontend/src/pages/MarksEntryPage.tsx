@@ -43,6 +43,7 @@ export const MarksEntryPage = () => {
   const [loadError, setLoadError] = useState<string>('');
   const [saveMessage, setSaveMessage] = useState<string>('');
 
+
   useEffect(() => { (async () => {
     if (!authReady || !isAuthenticated) return;
     try {

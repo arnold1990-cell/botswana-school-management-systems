@@ -1,8 +1,7 @@
 import { useAuth } from './AuthContext';
 
 export const useAuthReady = () => {
-  const { loading, user, authInitialized, isAuthenticated } = useAuth();
-  const authReady = authInitialized && !loading;
+  const { loading, user, authReady, isAuthenticated } = useAuth();
 
   return { authReady, authLoading: loading, user, isAuthenticated };
 };

@@ -43,6 +43,7 @@ export const LearnersPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [categories, setCategories] = useState<StudentCategory[]>([]);
 
+
   const load = async (grade?: string, q?: string) => {
     setLoading(true);
     setError('');

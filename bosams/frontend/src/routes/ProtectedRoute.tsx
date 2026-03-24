@@ -1,17 +1,15 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { getAccessToken } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 export const ProtectedRoute = () => {
   const location = useLocation();
-  const { loading, authInitialized, isAuthenticated } = useAuth();
-  const accessToken = getAccessToken();
+  const { loading, authReady, isAuthenticated } = useAuth();
 
-  if (!authInitialized || loading) {
+  if (!authReady || loading) {
     return <div>Loading...</div>;
   }
 
-  if (!accessToken || !isAuthenticated) {
+  if (!isAuthenticated) {
     return <Navigate to='/login' replace state={{ from: location }} />;
   }
 

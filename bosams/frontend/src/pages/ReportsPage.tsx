@@ -7,7 +7,7 @@ type Term = { id: number; termNo: number };
 type Row = { learnerName: string; catScore?: number; examScore?: number; total: number; finalGrade: string };
 
 export const ReportsPage = () => {
-  const { authReady, authLoading } = useAuthReady();
+  const { authReady, authLoading, isAuthenticated } = useAuthReady();
   const [year, setYear] = useState<number>();
   const [termNumber, setTermNumber] = useState(1);
   const [terms, setTerms] = useState<Term[]>([]);
@@ -18,7 +18,7 @@ export const ReportsPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => { (async () => {
-    if (!authReady) return;
+    if (!authReady || !isAuthenticated) return;
     try {
       const y = (await api.get('/academic-years/current')).data.year;
       setYear(y);
@@ -33,7 +33,7 @@ export const ReportsPage = () => {
     } catch {
       setError('Failed to load reports setup.');
     }
-  })(); }, [authReady]);
+  })(); }, [authReady, isAuthenticated]);
 
   const load = async () => {
     if (!year || !subjectId) return;

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export const ACCESS_TOKEN_KEY = 'accessToken';
 export const REFRESH_TOKEN_KEY = 'bosams_refresh_token';
-const LEGACY_ACCESS_TOKEN_KEYS = ['token', 'jwt', 'authToken', 'session token'];
+const LEGACY_ACCESS_TOKEN_KEYS = ['token', 'jwt', 'authToken', 'access_token', 'session token'];
 const LEGACY_REFRESH_TOKEN_KEYS = ['refreshToken'];
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';

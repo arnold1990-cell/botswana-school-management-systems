@@ -24,16 +24,57 @@ type AttendanceRecord = {
   remark?: string;
 };
 
-const ModulePage = ({ title, description }: { title: string; description: string }) => (
+type ModulePageProps = {
+  title: string;
+  description: string;
+  summaryLabel: string;
+  summaryValue: string;
+  primaryAction: string;
+  placeholderItems: string[];
+};
+
+const ModulePage = ({
+  title,
+  description,
+  summaryLabel,
+  summaryValue,
+  primaryAction,
+  placeholderItems,
+}: ModulePageProps) => (
   <section>
     <div className='page-header'>
       <div>
         <h2>{title}</h2>
         <p className='muted'>{description}</p>
       </div>
+      <button className='btn btn-primary' type='button'>{primaryAction}</button>
     </div>
-    <article className='card'>
-      <p className='muted'>This BOSAMS module is scaffolded and ready for extension from this page.</p>
+
+    <div className='card-grid card-grid-2'>
+      <article className='card metric-card'>
+        <p className='muted'>{summaryLabel}</p>
+        <h3>{summaryValue}</h3>
+        <span className='badge'>Ready</span>
+      </article>
+      <article className='card'>
+        <h3>Quick Summary</h3>
+        <p className='muted'>Use this area to manage and review records for the {title.toLowerCase()} module.</p>
+      </article>
+    </div>
+
+    <article className='card' style={{ marginTop: 12 }}>
+      <h3>{title} Overview</h3>
+      <table className='table'>
+        <thead><tr><th>Item</th><th>Status</th></tr></thead>
+        <tbody>
+          {placeholderItems.map((item) => (
+            <tr key={item}>
+              <td>{item}</td>
+              <td><span className='badge'>Active</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </article>
   </section>
 );
@@ -46,12 +87,19 @@ export const AttendancePage = () => {
   const [studentId, setStudentId] = useState('');
   const [status, setStatus] = useState<AttendanceStatus>('PRESENT');
   const [remark, setRemark] = useState('');
+  const [error, setError] = useState('');
 
   const canMark = useMemo(() => user?.role === 'ADMIN' || user?.role === 'PRINCIPAL' || user?.role === 'TEACHER', [user?.role]);
 
   const load = async () => {
-    const response = await api.get<AttendanceRecord[]>(`/attendance/grade/${gradeLevel}`, { params: { date } });
-    setRecords(response.data);
+    try {
+      setError('');
+      const response = await api.get<AttendanceRecord[]>(`/attendance/grade/${gradeLevel}`, { params: { date } });
+      setRecords(response.data ?? []);
+    } catch {
+      setRecords([]);
+      setError('Attendance data is temporarily unavailable. You can still use this page to mark attendance.');
+    }
   };
 
   useEffect(() => {
@@ -66,14 +114,19 @@ export const AttendancePage = () => {
     if (!parsedStudentId) {
       return;
     }
-    await api.post('/attendance/mark', {
-      gradeLevel,
-      attendanceDate: date,
-      items: [{ studentId: parsedStudentId, status, remark }],
-    });
-    setStudentId('');
-    setRemark('');
-    await load();
+    try {
+      setError('');
+      await api.post('/attendance/mark', {
+        gradeLevel,
+        attendanceDate: date,
+        items: [{ studentId: parsedStudentId, status, remark }],
+      });
+      setStudentId('');
+      setRemark('');
+      await load();
+    } catch {
+      setError('Unable to save attendance right now. Please try again.');
+    }
   };
 
   return (
@@ -113,6 +166,7 @@ export const AttendancePage = () => {
 
       <article className='card' style={{ marginTop: 12 }}>
         <h3>Attendance Register</h3>
+        {error && <p className='muted' style={{ marginBottom: 10 }}>{error}</p>}
         <table className='table'>
           <thead><tr><th>Date</th><th>Student</th><th>Status</th><th>Remark</th></tr></thead>
           <tbody>
@@ -137,27 +191,39 @@ export const AnnouncementsPage = () => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [targetRole, setTargetRole] = useState('');
+  const [error, setError] = useState('');
 
   const canPublish = user?.role === 'ADMIN' || user?.role === 'PRINCIPAL' || user?.role === 'TEACHER';
 
   const load = async () => {
-    const response = await api.get<Announcement[]>('/announcements');
-    setItems(response.data);
+    try {
+      setError('');
+      const response = await api.get<Announcement[]>('/announcements');
+      setItems(response.data ?? []);
+    } catch {
+      setItems([]);
+      setError('Announcements could not be loaded at the moment.');
+    }
   };
 
   useEffect(() => { load(); }, []);
 
   const publish = async (event: FormEvent) => {
     event.preventDefault();
-    await api.post('/announcements', {
-      title,
-      message,
-      targetRole: targetRole || null,
-    });
-    setTitle('');
-    setMessage('');
-    setTargetRole('');
-    await load();
+    try {
+      setError('');
+      await api.post('/announcements', {
+        title,
+        message,
+        targetRole: targetRole || null,
+      });
+      setTitle('');
+      setMessage('');
+      setTargetRole('');
+      await load();
+    } catch {
+      setError('Could not publish announcement. Please try again.');
+    }
   };
 
   return (
@@ -191,6 +257,7 @@ export const AnnouncementsPage = () => {
 
       <article className='card' style={{ marginTop: 12 }}>
         <h3>Latest Notices</h3>
+        {error && <p className='muted' style={{ marginBottom: 10 }}>{error}</p>}
         <table className='table'>
           <thead><tr><th>Title</th><th>Target</th><th>Published</th></tr></thead>
           <tbody>
@@ -198,7 +265,7 @@ export const AnnouncementsPage = () => {
               <tr key={item.id}>
                 <td>{item.title}<br /><span className='muted'>{item.message}</span></td>
                 <td>{item.targetRole || 'ALL'}</td>
-                <td>{new Date(item.createdAt).toLocaleString()}</td>
+                <td>{item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -208,11 +275,11 @@ export const AnnouncementsPage = () => {
   );
 };
 
-export const TimetablePage = () => <ModulePage title='Timetable' description='Class, teacher, and learner timetable view.' />;
-export const AssignmentsPage = () => <ModulePage title='Assignments' description='Create tasks, collect submissions, and review feedback.' />;
-export const ExamsPage = () => <ModulePage title='Exams & Results' description='Manage exams, results, and student performance summaries.' />;
-export const FeesPage = () => <ModulePage title='Fees & Finance' description='Session-year fees setup, payments, receipts, and balances.' />;
-export const LibraryPage = () => <ModulePage title='Library' description='Digital resources, uploads, and search-ready listings.' />;
-export const HolidaysPage = () => <ModulePage title='Holiday List' description='School calendar and holiday configuration.' />;
-export const MessagesPage = () => <ModulePage title='Messages & Notifications' description='In-app communications and notification center.' />;
-export const SettingsPage = () => <ModulePage title='Settings' description='School profile, configuration, and security settings.' />;
+export const TimetablePage = () => <ModulePage title='Timetable' description='Class, teacher, and learner timetable view.' summaryLabel='Today Classes' summaryValue='8' primaryAction='Manage Timetable' placeholderItems={['Form 1A Morning Slot', 'Form 2B Lab Session', 'Teacher Coverage']} />;
+export const AssignmentsPage = () => <ModulePage title='Assignments' description='Create tasks, collect submissions, and review feedback.' summaryLabel='Open Assignments' summaryValue='12' primaryAction='Create Assignment' placeholderItems={['Mathematics Homework', 'Science Practical', 'English Essay Review']} />;
+export const ExamsPage = () => <ModulePage title='Exams & Results' description='Manage exams, results, and student performance summaries.' summaryLabel='Scheduled Exams' summaryValue='6' primaryAction='Schedule Exam' placeholderItems={['Mid-Term Timetable', 'Result Publishing Queue', 'Exam Moderation Checklist']} />;
+export const FeesPage = () => <ModulePage title='Fees & Finance' description='Session-year fees setup, payments, receipts, and balances.' summaryLabel='Outstanding Balance' summaryValue='BWP 24,800' primaryAction='Record Payment' placeholderItems={['Pending Parent Payments', 'Recent Receipts', 'Fee Structure by Grade']} />;
+export const LibraryPage = () => <ModulePage title='Library' description='Digital resources, uploads, and search-ready listings.' summaryLabel='Books Available' summaryValue='1,248' primaryAction='Add Resource' placeholderItems={['New Arrivals', 'Borrowed Items', 'Overdue Returns']} />;
+export const HolidaysPage = () => <ModulePage title='Holiday List' description='School calendar and holiday configuration.' summaryLabel='Upcoming Holidays' summaryValue='4' primaryAction='Add Holiday' placeholderItems={['Mid-Term Break', 'National Holiday Calendar', 'School Event Closures']} />;
+export const MessagesPage = () => <ModulePage title='Messages & Notifications' description='In-app communications and notification center.' summaryLabel='Unread Messages' summaryValue='9' primaryAction='Compose Message' placeholderItems={['Parent Broadcast', 'Teacher Circular', 'Student Notifications']} />;
+export const SettingsPage = () => <ModulePage title='Settings' description='School profile, configuration, and security settings.' summaryLabel='Configuration Areas' summaryValue='7' primaryAction='Update Settings' placeholderItems={['School Profile', 'Academic Year Setup', 'Access & Security']} />;

@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,5 +74,31 @@ class SecurityIntegrationTest {
         mockMvc.perform(post("/api/academic-years").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType("application/json").content("{\"year\":2025}"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void subjectsWithoutTokenReturn401() throws Exception {
+        mockMvc.perform(get("/api/subjects"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void subjectsWithTeacherTokenReturn200() throws Exception {
+        UserEntity teacher = TestDataFactory.user(UUID.fromString("44444444-4444-4444-4444-444444444444"), Enums.Role.TEACHER);
+        when(userRepository.findById(teacher.getId())).thenReturn(Optional.of(teacher));
+        String token = jwtService.generateAccessToken(teacher.getId(), "TEACHER");
+
+        mockMvc.perform(get("/api/subjects").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void subjectsWithStudentTokenReturn403() throws Exception {
+        UserEntity student = TestDataFactory.user(UUID.fromString("55555555-5555-5555-5555-555555555555"), Enums.Role.STUDENT);
+        when(userRepository.findById(student.getId())).thenReturn(Optional.of(student));
+        String token = jwtService.generateAccessToken(student.getId(), "STUDENT");
+
+        mockMvc.perform(get("/api/subjects").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
     }
 }

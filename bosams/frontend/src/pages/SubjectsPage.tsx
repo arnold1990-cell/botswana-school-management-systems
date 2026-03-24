@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { AxiosError } from 'axios';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
+import { useAuth } from '../auth/AuthContext';
 
 type Subject = {
   id: number;
@@ -18,10 +20,25 @@ const allClassOptions = [
 ];
 
 const toErrorMessage = (error: unknown) => {
-  const apiMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-  if (typeof apiMessage === 'string' && apiMessage.trim()) {
-    return apiMessage;
+  const axiosError = error as AxiosError<{ message?: string }>;
+  const status = axiosError.response?.status;
+
+  if (status === 401) {
+    return 'Authentication required. Please sign in again.';
   }
+
+  if (status === 403) {
+    return 'Access denied. You do not have permission to view subjects.';
+  }
+
+  if (typeof axiosError.response?.data?.message === 'string' && axiosError.response.data.message.trim()) {
+    return axiosError.response.data.message;
+  }
+
+  if (!axiosError.response) {
+    return 'Unable to load subjects. Please check your network and try again.';
+  }
+
   return 'Unable to load subjects. Please try again.';
 };
 
@@ -41,6 +58,7 @@ const normalizeSubjects = (payload: unknown): Subject[] => {
 };
 
 export const SubjectsPage = () => {
+  const { loading: authLoading, user } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [level, setLevel] = useState<LevelFilter>('ALL');
   const [classLevel, setClassLevel] = useState('ALL');
@@ -60,7 +78,11 @@ export const SubjectsPage = () => {
     }
   }, [classLevel, classOptions]);
 
-  const load = async (selectedLevel: LevelFilter, selectedClassLevel: string) => {
+  const load = useCallback(async (selectedLevel: LevelFilter, selectedClassLevel: string) => {
+    if (authLoading || !user) {
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -78,11 +100,11 @@ export const SubjectsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading, user]);
 
   useEffect(() => {
     load(level, classLevel);
-  }, [level, classLevel]);
+  }, [classLevel, level, load]);
 
   return <section>
     <h2>Subjects</h2>

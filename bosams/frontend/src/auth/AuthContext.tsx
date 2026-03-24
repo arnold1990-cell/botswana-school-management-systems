@@ -38,8 +38,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (email: string, password: string): Promise<User> => {
     const r = await api.post('/auth/login', { email, password });
-    localStorage.setItem(ACCESS_TOKEN_KEY, r.data.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, r.data.refreshToken);
+    if (typeof r.data?.accessToken === 'string' && r.data.accessToken) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, r.data.accessToken);
+    }
+    if (typeof r.data?.refreshToken === 'string' && r.data.refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, r.data.refreshToken);
+    }
+    if (import.meta.env.DEV) {
+      console.info('[auth] login success', {
+        hasAccessTokenInStorage: Boolean(localStorage.getItem(ACCESS_TOKEN_KEY)),
+        hasRefreshTokenInStorage: Boolean(localStorage.getItem(REFRESH_TOKEN_KEY)),
+        loginRole: r.data?.user?.role,
+      });
+    }
     return load();
   };
 

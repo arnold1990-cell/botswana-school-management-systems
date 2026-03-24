@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,14 +27,16 @@ public class SubjectsController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER')")
     public List<SubjectEntity> list(@RequestParam(required = false) Integer grade,
-                                    @RequestParam(required = false) Enums.SchoolLevel level) {
+                                    @RequestParam(required = false) Enums.SchoolLevel level,
+                                    Authentication authentication) {
         List<SubjectEntity> found = level != null
                 ? subjects.findBySchoolLevelAndStatusOrderByNameAsc(level, Enums.EntityStatus.ACTIVE)
                 : subjects.findByStatusOrderBySchoolLevelAscGradeFromAscNameAsc(Enums.EntityStatus.ACTIVE);
         if (grade != null) {
             found = found.stream().filter(s -> grade >= s.getGradeFrom() && grade <= s.getGradeTo()).toList();
         }
-        log.info("Subjects lookup grade={} level={} count={}", grade, level, found.size());
+        log.info("Subjects lookup grade={} level={} count={} principal={}", grade, level, found.size(),
+                authentication == null ? "anonymous" : authentication.getName());
         return found;
     }
 

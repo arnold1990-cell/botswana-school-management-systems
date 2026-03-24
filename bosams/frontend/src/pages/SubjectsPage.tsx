@@ -1,6 +1,6 @@
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import api from '../api/client';
+import api, { getAccessToken } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 type Subject = {
@@ -34,11 +34,18 @@ const toErrorMessage = (error: unknown) => {
     return 'Access denied. You do not have permission to view subjects.';
   }
 
+  if (status === 404) {
+    return 'Subjects endpoint was not found. Please contact support.';
+  }
+
   if (typeof axiosError.response?.data?.message === 'string' && axiosError.response.data.message.trim()) {
     return axiosError.response.data.message;
   }
 
   if (!axiosError.response) {
+    if (axiosError.code === 'ERR_NETWORK') {
+      return 'Network/CORS error while loading subjects. Please verify backend connectivity and CORS settings.';
+    }
     return 'Unable to load subjects. Please check your network and try again.';
   }
 
@@ -89,11 +96,26 @@ export const SubjectsPage = () => {
     if (authLoading || !user) {
       return;
     }
+    const token = getAccessToken();
+    if (!token) {
+      setError('Authentication required. Please sign in again.');
+      setSubjects([]);
+      return;
+    }
 
     setLoading(true);
     setError('');
 
     try {
+      if (import.meta.env.DEV) {
+        console.info('[subjects] request start', {
+          url: '/subjects',
+          hasAccessToken: Boolean(token),
+          authHeaderWouldIncludeBearer: true,
+          authLoading,
+          role: user.role,
+        });
+      }
       const response = await api.get('/subjects', {
         params: {
           ...(selectedLevel !== 'ALL' ? { level: selectedLevel } : {}),

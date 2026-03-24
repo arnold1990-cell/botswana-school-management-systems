@@ -3,7 +3,7 @@ package com.bosams.service;
 import com.bosams.domain.Enums;
 import com.bosams.domain.SubjectEntity;
 import com.bosams.repository.SubjectRepository;
-import com.bosams.web.ApiException;
+import com.bosams.common.ApiException;
 import com.bosams.web.dto.SubjectDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

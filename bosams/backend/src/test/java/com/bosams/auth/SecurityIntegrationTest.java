@@ -101,4 +101,20 @@ class SecurityIntegrationTest {
         mockMvc.perform(get("/api/subjects").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void learnersWithoutTokenReturn401() throws Exception {
+        mockMvc.perform(get("/api/learners"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void learnersWithAdminTokenReturn200() throws Exception {
+        UserEntity admin = TestDataFactory.user(UUID.fromString("66666666-6666-6666-6666-666666666666"), Enums.Role.ADMIN);
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        String token = jwtService.generateAccessToken(admin.getId(), "ADMIN");
+
+        mockMvc.perform(get("/api/learners").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
 }

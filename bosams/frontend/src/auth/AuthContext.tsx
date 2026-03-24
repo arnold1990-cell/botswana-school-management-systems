@@ -10,6 +10,10 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User>();
   const [loading, setLoading] = useState(true);
+  const clearStoredAuth = () => {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  };
 
   const load = async (): Promise<User> => {
     const r = await api.get('/me');
@@ -27,6 +31,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         await load();
       } catch {
+        clearStoredAuth();
         setUser(undefined);
       } finally {
         setLoading(false);
@@ -40,6 +45,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const r = await api.post('/auth/login', { email, password });
     if (typeof r.data?.accessToken === 'string' && r.data.accessToken) {
       localStorage.setItem(ACCESS_TOKEN_KEY, r.data.accessToken);
+    } else {
+      clearStoredAuth();
+      throw new Error('Login response did not include an access token');
     }
     if (typeof r.data?.refreshToken === 'string' && r.data.refreshToken) {
       localStorage.setItem(REFRESH_TOKEN_KEY, r.data.refreshToken);
@@ -55,8 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    clearStoredAuth();
     setUser(undefined);
   };
 

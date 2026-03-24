@@ -128,3 +128,25 @@ test('subjects page maps 403 to access denied message', async ({ page }) => {
 
   await expect(page.getByText('Access denied. You do not have permission to view subjects.')).toBeVisible();
 });
+
+test('stale token does not load protected subjects request before auth bootstrap finishes', async ({ page }) => {
+  await page.unroute('**/api/me');
+  await page.route('**/api/me', async (route) => {
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: 'Authentication required' }),
+    });
+  });
+
+  let subjectsRequestCount = 0;
+  await page.route('**/api/subjects*', async (route) => {
+    subjectsRequestCount += 1;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(subjects) });
+  });
+
+  await page.goto('/subjects');
+
+  await expect(page).toHaveURL(/\/login$/);
+  expect(subjectsRequestCount).toBe(0);
+});

@@ -68,4 +68,12 @@ public interface TeacherAssignmentRepository extends JpaRepository<TeacherAssign
     Set<Long> teacherSubjectIdsForStream(@Param("teacherUserId") UUID teacherUserId,
                                          @Param("academicYearId") Long academicYearId,
                                          @Param("streamId") Long streamId);
+
+    @Query("""
+            select ta
+            from TeacherAssignment ta
+            where ta.teacher.id = :teacherUserId
+              and ta.active = true
+            """)
+    List<TeacherAssignment> findByTeacherUserId(@Param("teacherUserId") UUID teacherUserId);
 }

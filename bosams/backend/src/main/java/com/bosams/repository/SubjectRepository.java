@@ -9,6 +9,22 @@ import java.util.Optional;
 
 public interface SubjectRepository extends JpaRepository<SubjectEntity, Long> {
     Optional<SubjectEntity> findByNameIgnoreCase(String name);
-    List<SubjectEntity> findBySchoolLevelAndStatusOrderByNameAsc(Enums.SchoolLevel schoolLevel, Enums.EntityStatus status);
+
     List<SubjectEntity> findByStatusOrderBySchoolLevelAscGradeFromAscNameAsc(Enums.EntityStatus status);
+
+    List<SubjectEntity> findBySchoolLevelAndStatusOrderByGradeFromAscNameAsc(Enums.SchoolLevel schoolLevel,
+                                                                              Enums.EntityStatus status);
+
+    List<SubjectEntity> findByStatusAndGradeFromLessThanEqualAndGradeToGreaterThanEqualOrderBySchoolLevelAscGradeFromAscNameAsc(
+            Enums.EntityStatus status,
+            Integer gradeFrom,
+            Integer gradeTo
+    );
+
+    List<SubjectEntity> findBySchoolLevelAndStatusAndGradeFromLessThanEqualAndGradeToGreaterThanEqualOrderByGradeFromAscNameAsc(
+            Enums.SchoolLevel schoolLevel,
+            Enums.EntityStatus status,
+            Integer gradeFrom,
+            Integer gradeTo
+    );
 }

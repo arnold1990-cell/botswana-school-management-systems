@@ -2,8 +2,31 @@ import axios from 'axios';
 
 export const ACCESS_TOKEN_KEY = 'bosams_access_token';
 export const REFRESH_TOKEN_KEY = 'bosams_refresh_token';
+const LEGACY_ACCESS_TOKEN_KEYS = ['accessToken', 'token'];
+const LEGACY_REFRESH_TOKEN_KEYS = ['refreshToken'];
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+const readStoredToken = (primaryKey: string, legacyKeys: string[] = []): string | null => {
+  const primary = localStorage.getItem(primaryKey);
+  if (primary) {
+    return primary;
+  }
+
+  for (const key of legacyKeys) {
+    const legacy = localStorage.getItem(key);
+    if (legacy) {
+      localStorage.setItem(primaryKey, legacy);
+      localStorage.removeItem(key);
+      return legacy;
+    }
+  }
+
+  return null;
+};
+
+export const getAccessToken = (): string | null => readStoredToken(ACCESS_TOKEN_KEY, LEGACY_ACCESS_TOKEN_KEYS);
+export const getRefreshToken = (): string | null => readStoredToken(REFRESH_TOKEN_KEY, LEGACY_REFRESH_TOKEN_KEYS);
 
 const clearAuthAndRedirect = () => {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -23,7 +46,7 @@ type RetriableRequestConfig = {
 };
 
 const refreshAccessToken = async (): Promise<string | null> => {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  const refreshToken = getRefreshToken();
 
   if (!refreshToken) {
     return null;
@@ -37,11 +60,15 @@ const refreshAccessToken = async (): Promise<string | null> => {
     });
 
     const nextAccessToken = response.data?.accessToken;
+    const nextRefreshToken = response.data?.refreshToken;
     if (typeof nextAccessToken !== 'string' || !nextAccessToken) {
       return null;
     }
 
     localStorage.setItem(ACCESS_TOKEN_KEY, nextAccessToken);
+    if (typeof nextRefreshToken === 'string' && nextRefreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, nextRefreshToken);
+    }
     return nextAccessToken;
   } catch {
     return null;
@@ -49,7 +76,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
 };
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const token = getAccessToken();
   const requestUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
   config.headers = config.headers || {};
   config.headers['Content-Type'] = 'application/json';
@@ -71,7 +98,7 @@ api.interceptors.response.use(
   async (error) => {
     const status = error.response?.status;
     const requestUrl = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
-    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const token = getAccessToken();
     const originalRequest = error.config as typeof error.config & RetriableRequestConfig;
     console.info('[api] response', { url: requestUrl, hasToken: Boolean(token), status: status ?? 0 });
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import api, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from '../api/client';
+import api, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getAccessToken } from '../api/client';
 import { User } from '../types/auth';
 
 type Ctx = { user?: User; login: (email: string, password: string) => Promise<User>; logout: () => void };
@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const bootstrap = async () => {
-      if (!localStorage.getItem(ACCESS_TOKEN_KEY)) {
+      if (!getAccessToken()) {
         setLoading(false);
         return;
       }

@@ -19,15 +19,18 @@ const allClassOptions = [
   ...Array.from({ length: 5 }, (_, i) => ({ value: String(i + 8), label: `Form ${i + 1}` })),
 ];
 
-const toErrorMessage = (error: unknown) => {
-  const axiosError = error as AxiosError<{ message?: string }>;
-  const status = axiosError.response?.status;
+type ApiErrorPayload = { message?: string; code?: string };
 
-  if (status === 401) {
+const toErrorMessage = (error: unknown) => {
+  const axiosError = error as AxiosError<ApiErrorPayload>;
+  const status = axiosError.response?.status;
+  const code = axiosError.response?.data?.code;
+
+  if (status === 401 || code === 'UNAUTHORIZED') {
     return 'Authentication required. Please sign in again.';
   }
 
-  if (status === 403) {
+  if (status === 403 || code === 'FORBIDDEN') {
     return 'Access denied. You do not have permission to view subjects.';
   }
 
@@ -37,6 +40,10 @@ const toErrorMessage = (error: unknown) => {
 
   if (!axiosError.response) {
     return 'Unable to load subjects. Please check your network and try again.';
+  }
+
+  if (status && status >= 500) {
+    return 'Server error while loading subjects. Please try again shortly.';
   }
 
   return 'Unable to load subjects. Please try again.';

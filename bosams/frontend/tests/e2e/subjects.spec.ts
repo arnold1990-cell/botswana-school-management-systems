@@ -44,6 +44,24 @@ test('subjects page renders rows from api data and filters by level', async ({ p
   expect(sawAuthHeader).toBeTruthy();
 });
 
+test('subjects request uses migrated legacy access token storage key', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.removeItem('bosams_access_token');
+    localStorage.setItem('accessToken', 'legacy-token');
+  });
+
+  let sawAuthHeader = false;
+  await page.route('**/api/subjects*', async (route) => {
+    sawAuthHeader = route.request().headers()['authorization'] === 'Bearer legacy-token';
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(subjects) });
+  });
+
+  await page.goto('/subjects');
+
+  await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
+  expect(sawAuthHeader).toBeTruthy();
+});
+
 test('subjects page shows empty state only for successful no-match filter', async ({ page }) => {
   await page.route('**/api/subjects*', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });

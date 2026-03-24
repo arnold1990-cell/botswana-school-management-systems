@@ -45,53 +45,21 @@ class AuthLoginIntegrationTest {
 
     @Test
     void adminLoginReturnsJwtAndCanAccessProtectedEndpoint() throws Exception {
-        String loginBody = """
-                {
-                  "email": "admin@bosams.local",
-                  "password": "password"
-                }
-                """;
-
-        String loginResponseBody = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.user.role").value("ADMIN"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        JsonNode loginJson = objectMapper.readTree(loginResponseBody);
-        String accessToken = loginJson.get("accessToken").asText();
+        String accessToken = login("admin@bosams.local", "password", "ADMIN");
 
         mockMvc.perform(get("/api/users/me")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("admin@bosams.local"));
+
+        mockMvc.perform(get("/api/subjects")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
     }
 
     @Test
     void teacherLoginCanAccessTeacherEndpointButNotAdminEndpoint() throws Exception {
-        String loginBody = """
-                {
-                  "email": "teacher@bosams.local",
-                  "password": "password"
-                }
-                """;
-
-        String loginResponseBody = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginBody))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.user.role").value("TEACHER"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        JsonNode loginJson = objectMapper.readTree(loginResponseBody);
-        String accessToken = loginJson.get("accessToken").asText();
+        String accessToken = login("teacher@bosams.local", "password", "TEACHER");
 
 
         String tokenPayload = decodeJwtPayload(accessToken);
@@ -105,6 +73,32 @@ class AuthLoginIntegrationTest {
         mockMvc.perform(get("/api/admin/dashboard")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/subjects")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
+    }
+
+    private String login(String email, String password, String expectedRole) throws Exception {
+        String loginBody = """
+                {
+                  "email": "%s",
+                  "password": "%s"
+                }
+                """.formatted(email, password);
+
+        String loginResponseBody = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.user.role").value(expectedRole))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode loginJson = objectMapper.readTree(loginResponseBody);
+        return loginJson.get("accessToken").asText();
     }
     private String decodeJwtPayload(String jwt) {
         String[] parts = jwt.split("\\.");

@@ -1,9 +1,11 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useState } from 'react';
 
 export const AppLayout = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [studentsOpen, setStudentsOpen] = useState(true);
 
   const navItems = user?.role === 'TEACHER'
     ? [
@@ -73,7 +75,28 @@ export const AppLayout = () => {
           BOSAMS
         </div>
         <nav className='app-nav'>
-          {navItems.map((item) => (
+          {user?.role === 'ADMIN' || user?.role === 'PRINCIPAL' ? (
+            <>
+              <NavLink to='/dashboard' className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>Dashboard</NavLink>
+              <button type='button' className='app-nav-link' onClick={() => setStudentsOpen((open) => !open)}>
+                Students {studentsOpen ? '▾' : '▸'}
+              </button>
+              {studentsOpen && (
+                <div style={{ paddingLeft: 12, display: 'grid', gap: 6 }}>
+                  <NavLink to='/students/admission' className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>Student Admission</NavLink>
+                  <NavLink to='/students/details' className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>Student Details</NavLink>
+                  <NavLink to='/students/disable' className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>Student Disable</NavLink>
+                  <NavLink to='/students/category' className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>Student Category</NavLink>
+                  <NavLink to='/students/reset-password' className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>Student Reset Password</NavLink>
+                </div>
+              )}
+              {navItems.filter((item) => !item.to.startsWith('/dashboard') && !item.to.startsWith('/students')).map((item) => (
+                <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>
+                  {item.label}
+                </NavLink>
+              ))}
+            </>
+          ) : navItems.map((item) => (
             <NavLink key={item.to} to={item.to} className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`}>
               {item.label}
             </NavLink>

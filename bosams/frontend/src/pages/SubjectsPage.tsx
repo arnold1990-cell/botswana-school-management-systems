@@ -1,138 +1,93 @@
-import { AxiosError } from 'axios';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import api, { getAccessToken } from '../api/client';
-import { useAuth } from '../auth/AuthContext';
+import { useEffect, useMemo, useState } from 'react';
+import { getSubjects, Subject, SubjectLevel, SubjectServiceError } from '../services/subjectService';
 
-type Subject = {
-  id: number;
-  name: string;
-  code?: string;
-  schoolLevel: 'PRIMARY' | 'JUNIOR_SECONDARY' | 'SENIOR_SECONDARY';
-  gradeFrom: number;
-  gradeTo: number;
-};
+type LevelFilter = 'ALL' | SubjectLevel;
+type ClassFilter = 'ALL' | 'STD_1' | 'STD_2' | 'STD_3' | 'STD_4' | 'STD_5' | 'STD_6' | 'STD_7' | 'FORM_1' | 'FORM_2' | 'FORM_3' | 'FORM_4' | 'FORM_5';
 
-type LevelFilter = 'ALL' | Subject['schoolLevel'];
+type LoadState = 'loading' | 'success' | 'empty' | 'authError' | 'accessDenied' | 'serverError';
 
-const allClassOptions = [
-  ...Array.from({ length: 7 }, (_, i) => ({ value: String(i + 1), label: `Standard ${i + 1}` })),
-  ...Array.from({ length: 5 }, (_, i) => ({ value: String(i + 8), label: `Form ${i + 1}` })),
+const classOptions: Array<{ value: ClassFilter; label: string; level: SubjectLevel; grade: number }> = [
+  { value: 'STD_1', label: 'Standard 1', level: 'PRIMARY', grade: 1 },
+  { value: 'STD_2', label: 'Standard 2', level: 'PRIMARY', grade: 2 },
+  { value: 'STD_3', label: 'Standard 3', level: 'PRIMARY', grade: 3 },
+  { value: 'STD_4', label: 'Standard 4', level: 'PRIMARY', grade: 4 },
+  { value: 'STD_5', label: 'Standard 5', level: 'PRIMARY', grade: 5 },
+  { value: 'STD_6', label: 'Standard 6', level: 'PRIMARY', grade: 6 },
+  { value: 'STD_7', label: 'Standard 7', level: 'PRIMARY', grade: 7 },
+  { value: 'FORM_1', label: 'Form 1', level: 'JUNIOR_SECONDARY', grade: 8 },
+  { value: 'FORM_2', label: 'Form 2', level: 'JUNIOR_SECONDARY', grade: 9 },
+  { value: 'FORM_3', label: 'Form 3', level: 'JUNIOR_SECONDARY', grade: 10 },
+  { value: 'FORM_4', label: 'Form 4', level: 'SENIOR_SECONDARY', grade: 11 },
+  { value: 'FORM_5', label: 'Form 5', level: 'SENIOR_SECONDARY', grade: 12 },
 ];
 
-type ApiErrorPayload = { message?: string; code?: string };
+const levelLabel = (level: SubjectLevel) => level.replace(/_/g, ' ');
 
-const toErrorMessage = (error: unknown) => {
-  const axiosError = error as AxiosError<ApiErrorPayload>;
-  const status = axiosError.response?.status;
-
-  if (status === 401) {
-    return 'Authentication required. Please sign in again.';
+const classRangeLabel = (subject: Subject) => {
+  const formatGrade = (grade: number) => (grade <= 7 ? `Standard ${grade}` : `Form ${grade - 7}`);
+  if (subject.gradeFrom === subject.gradeTo) {
+    return formatGrade(subject.gradeFrom);
   }
-
-  if (status === 403) {
-    return 'Access denied. You do not have permission to view subjects.';
-  }
-
-  if (status === 404) {
-    return 'Subjects endpoint was not found. Please contact support.';
-  }
-
-  if (typeof axiosError.response?.data?.message === 'string' && axiosError.response.data.message.trim()) {
-    return axiosError.response.data.message;
-  }
-
-  if (!axiosError.response) {
-    if (axiosError.code === 'ERR_NETWORK') {
-      return 'Network/CORS error while loading subjects. Please verify backend connectivity and CORS settings.';
-    }
-    return 'Unable to load subjects. Please check your network and try again.';
-  }
-
-  if (status && status >= 500) {
-    return 'Server error while loading subjects. Please try again shortly.';
-  }
-
-  return 'Unable to load subjects. Please try again.';
+  return `${formatGrade(subject.gradeFrom)} - ${formatGrade(subject.gradeTo)}`;
 };
 
-const normalizeSubjects = (payload: unknown): Subject[] => {
-  if (Array.isArray(payload)) {
-    return payload as Subject[];
+const mapStateFromError = (error: unknown): LoadState => {
+  if (error instanceof SubjectServiceError) {
+    if (error.type === 'UNAUTHORIZED') return 'authError';
+    if (error.type === 'FORBIDDEN') return 'accessDenied';
   }
-
-  if (payload && typeof payload === 'object') {
-    const container = payload as { data?: unknown; items?: unknown; content?: unknown };
-    if (Array.isArray(container.data)) return container.data as Subject[];
-    if (Array.isArray(container.items)) return container.items as Subject[];
-    if (Array.isArray(container.content)) return container.content as Subject[];
-  }
-
-  return [];
+  return 'serverError';
 };
 
 export const SubjectsPage = () => {
-  const { loading: authLoading, user } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [level, setLevel] = useState<LevelFilter>('ALL');
-  const [classLevel, setClassLevel] = useState('ALL');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [selectedClass, setSelectedClass] = useState<ClassFilter>('ALL');
+  const [state, setState] = useState<LoadState>('loading');
 
-  const classOptions = useMemo(() => {
-    if (level === 'PRIMARY') return allClassOptions.filter((option) => Number(option.value) <= 7);
-    if (level === 'JUNIOR_SECONDARY') return allClassOptions.filter((option) => Number(option.value) >= 8 && Number(option.value) <= 10);
-    if (level === 'SENIOR_SECONDARY') return allClassOptions.filter((option) => Number(option.value) >= 11);
-    return allClassOptions;
+  const filteredClassOptions = useMemo(() => {
+    if (level === 'ALL') {
+      return classOptions;
+    }
+    return classOptions.filter((option) => option.level === level);
   }, [level]);
 
   useEffect(() => {
-    if (classLevel !== 'ALL' && !classOptions.some((option) => option.value === classLevel)) {
-      setClassLevel('ALL');
-    }
-  }, [classLevel, classOptions]);
-
-  const load = useCallback(async (selectedLevel: LevelFilter, selectedClassLevel: string) => {
-    if (authLoading || !user) {
-      return;
-    }
-    const token = getAccessToken();
-    if (!token) {
-      setError('Authentication required. Please sign in again.');
-      setSubjects([]);
+    if (selectedClass === 'ALL') {
       return;
     }
 
-    setLoading(true);
-    setError('');
-
-    try {
-      if (import.meta.env.DEV) {
-        console.info('[subjects] request start', {
-          url: '/subjects',
-          hasAccessToken: Boolean(token),
-          authHeaderWouldIncludeBearer: true,
-          authLoading,
-          role: user.role,
-        });
-      }
-      const response = await api.get('/subjects', {
-        params: {
-          ...(selectedLevel !== 'ALL' ? { level: selectedLevel } : {}),
-          ...(selectedClassLevel !== 'ALL' ? { grade: Number(selectedClassLevel) } : {}),
-        },
-      });
-      setSubjects(normalizeSubjects(response.data));
-    } catch (requestError) {
-      setError(toErrorMessage(requestError));
-      setSubjects([]);
-    } finally {
-      setLoading(false);
+    const selectedOption = classOptions.find((option) => option.value === selectedClass);
+    if (!selectedOption) {
+      setSelectedClass('ALL');
+      return;
     }
-  }, [authLoading, user]);
+
+    if (level !== 'ALL' && selectedOption.level !== level) {
+      setSelectedClass('ALL');
+    }
+  }, [level, selectedClass]);
 
   useEffect(() => {
-    load(level, classLevel);
-  }, [classLevel, level, load]);
+    const selectedOption = classOptions.find((option) => option.value === selectedClass);
+    const grade = selectedOption?.grade;
+    const requestLevel = level !== 'ALL' ? level : selectedOption?.level;
+
+    const loadSubjects = async () => {
+      setState('loading');
+
+      try {
+        const nextSubjects = await getSubjects({ level: requestLevel, grade });
+        setSubjects(nextSubjects);
+        setState(nextSubjects.length > 0 ? 'success' : 'empty');
+      } catch (error) {
+        setSubjects([]);
+        setState(mapStateFromError(error));
+      }
+    };
+
+    loadSubjects();
+  }, [level, selectedClass]);
 
   return <section>
     <h2>Subjects</h2>
@@ -147,23 +102,23 @@ export const SubjectsPage = () => {
           </select>
         </label>
         <label>Class
-          <select value={classLevel} onChange={(e) => setClassLevel(e.target.value)}>
+          <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value as ClassFilter)}>
             <option value='ALL'>All</option>
-            {classOptions.map((grade) => <option key={grade.value} value={grade.value}>{grade.label}</option>)}
+            {filteredClassOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </label>
       </div>
 
-      {error && <p className='muted'>{error}</p>}
-      {error && <button className='btn btn-secondary' type='button' onClick={() => load(level, classLevel)}>Retry</button>}
-      {loading && <p>Loading subjects...</p>}
+      {state === 'loading' && <p>Loading subjects...</p>}
+      {state === 'authError' && <p className='muted'>Authentication required. Please sign in again.</p>}
+      {state === 'accessDenied' && <p className='muted'>Access denied.</p>}
+      {state === 'serverError' && <p className='muted'>Unable to load subjects right now.</p>}
+      {state === 'empty' && <p>No subjects found for this filter.</p>}
 
-      <table className='table'>
+      {(state === 'success' || state === 'loading') && <table className='table'>
         <thead><tr><th>Name</th><th>Code</th><th>Level</th><th>Class Range</th></tr></thead>
-        <tbody>{subjects.map((s) => <tr key={s.id}><td>{s.name}</td><td>{s.code ?? '-'}</td><td>{s.schoolLevel.replace(/_/g, ' ')}</td><td>{s.gradeFrom === s.gradeTo ? s.gradeFrom : `${s.gradeFrom}-${s.gradeTo}`}</td></tr>)}</tbody>
-      </table>
-
-      {!loading && !error && subjects.length === 0 && <p>No subjects found for this filter.</p>}
+        <tbody>{subjects.map((subject) => <tr key={subject.id}><td>{subject.name}</td><td>{subject.code}</td><td>{levelLabel(subject.level)}</td><td>{classRangeLabel(subject)}</td></tr>)}</tbody>
+      </table>}
     </article>
   </section>;
 };

@@ -92,6 +92,17 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+
+    @Test
+    void subjectsWithAdminTokenReturn200() throws Exception {
+        UserEntity admin = TestDataFactory.user(UUID.fromString("77777777-7777-7777-7777-777777777777"), Enums.Role.ADMIN);
+        when(userRepository.findById(admin.getId())).thenReturn(Optional.of(admin));
+        String token = jwtService.generateAccessToken(admin.getId(), "ADMIN");
+
+        mockMvc.perform(get("/api/subjects").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
     @Test
     void subjectsWithStudentTokenReturn403() throws Exception {
         UserEntity student = TestDataFactory.user(UUID.fromString("55555555-5555-5555-5555-555555555555"), Enums.Role.STUDENT);

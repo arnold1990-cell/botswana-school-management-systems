@@ -71,6 +71,7 @@ const api = axios.create({
 
 type RetriableRequestConfig = {
   _retry?: boolean;
+  _skipAuthRedirect?: boolean;
 };
 
 const refreshAccessToken = async (): Promise<string | null> => {
@@ -147,7 +148,7 @@ api.interceptors.response.use(
       tokenStorageType: tokenInfo.storageType,
     });
 
-    if (status === 401 && originalRequest && !originalRequest._retry && !requestUrl.endsWith('/auth/login') && !requestUrl.endsWith('/auth/refresh')) {
+    if (status === 401 && originalRequest && !originalRequest._skipAuthRedirect && !originalRequest._retry && !requestUrl.endsWith('/auth/login') && !requestUrl.endsWith('/auth/refresh')) {
       originalRequest._retry = true;
       const nextAccessToken = await refreshAccessToken();
 
@@ -160,7 +161,7 @@ api.interceptors.response.use(
       clearAuthAndRedirect();
     }
 
-    if (status === 401 && (!originalRequest || requestUrl.endsWith('/auth/login') || requestUrl.endsWith('/auth/refresh'))) {
+    if (status === 401 && (!originalRequest || (!originalRequest._skipAuthRedirect && (requestUrl.endsWith('/auth/login') || requestUrl.endsWith('/auth/refresh'))))) {
       clearAuthAndRedirect();
     }
 

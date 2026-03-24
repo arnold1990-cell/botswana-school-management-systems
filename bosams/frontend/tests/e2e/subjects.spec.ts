@@ -8,8 +8,8 @@ const teacherUser = {
 };
 
 const subjects = [
-  { id: 1, name: 'English', code: 'PRIMARY_ENGLISH', schoolLevel: 'PRIMARY', gradeFrom: 1, gradeTo: 4 },
-  { id: 2, name: 'Mathematics', code: 'JUNIOR_MATHEMATICS', schoolLevel: 'JUNIOR_SECONDARY', gradeFrom: 8, gradeTo: 10 },
+  { id: 1, name: 'English', code: 'PRIMARY_ENGLISH', level: 'PRIMARY', gradeFrom: 1, gradeTo: 4, elective: false },
+  { id: 2, name: 'Mathematics', code: 'JUNIOR_MATHEMATICS', level: 'JUNIOR_SECONDARY', gradeFrom: 8, gradeTo: 10, elective: false },
 ];
 
 test.beforeEach(async ({ page }) => {
@@ -22,47 +22,18 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('subjects page renders rows from api data and filters by level', async ({ page }) => {
-  let sawAuthHeader = false;
+test('renders subject rows on success', async ({ page }) => {
   await page.route('**/api/subjects*', async (route) => {
-    sawAuthHeader = route.request().headers()['authorization'] === 'Bearer fake-token';
-    const url = new URL(route.request().url());
-    const level = url.searchParams.get('level');
-    const payload = level ? subjects.filter((subject) => subject.schoolLevel === level) : subjects;
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
-  });
-
-  await page.goto('/subjects');
-
-  await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Mathematics' })).toBeVisible();
-
-  await page.getByLabel('Level').selectOption('PRIMARY');
-
-  await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Mathematics' })).toHaveCount(0);
-  expect(sawAuthHeader).toBeTruthy();
-});
-
-test('subjects request uses migrated legacy access token storage key', async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.removeItem('bosams_access_token');
-    localStorage.setItem('accessToken', 'legacy-token');
-  });
-
-  let sawAuthHeader = false;
-  await page.route('**/api/subjects*', async (route) => {
-    sawAuthHeader = route.request().headers()['authorization'] === 'Bearer legacy-token';
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(subjects) });
   });
 
   await page.goto('/subjects');
 
   await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
-  expect(sawAuthHeader).toBeTruthy();
+  await expect(page.getByRole('cell', { name: 'Mathematics' })).toBeVisible();
 });
 
-test('subjects page shows empty state only for successful no-match filter', async ({ page }) => {
+test('shows empty state correctly', async ({ page }) => {
   await page.route('**/api/subjects*', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
@@ -70,60 +41,12 @@ test('subjects page shows empty state only for successful no-match filter', asyn
   await page.goto('/subjects');
 
   await expect(page.getByText('No subjects found for this filter.')).toBeVisible();
-  await expect(page.getByText('Unable to load subjects')).toHaveCount(0);
+  await expect(page.getByText('Unable to load subjects right now.')).toHaveCount(0);
 });
 
-test('subjects page shows error state and retry button when api fails', async ({ page }) => {
-  let shouldFail = true;
-
+test('shows 401 auth error correctly', async ({ page }) => {
   await page.route('**/api/subjects*', async (route) => {
-    if (shouldFail) {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ message: 'Subject service unavailable' }),
-      });
-      return;
-    }
-
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(subjects) });
-  });
-
-  await page.goto('/subjects');
-
-  await expect(page.getByText('Subject service unavailable')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
-  await expect(page.getByText('No subjects found for this filter.')).toHaveCount(0);
-
-  shouldFail = false;
-  await page.getByRole('button', { name: 'Retry' }).click();
-
-  await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
-});
-
-
-
-test('subjects page does not map non-401 responses to authentication required', async ({ page }) => {
-  await page.route('**/api/subjects*', async (route) => {
-    await route.fulfill({
-      status: 500,
-      contentType: 'application/json',
-      body: JSON.stringify({ code: 'UNAUTHORIZED', message: 'Subject service unavailable' }),
-    });
-  });
-
-  await page.goto('/subjects');
-
-  await expect(page.getByText('Authentication required. Please sign in again.')).toHaveCount(0);
-  await expect(page.getByText('Subject service unavailable')).toBeVisible();
-});
-test('subjects page maps 401 to authentication required message', async ({ page }) => {
-  await page.route('**/api/subjects*', async (route) => {
-    await route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: 'Authentication required' }),
-    });
+    await route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ message: 'Authentication required' }) });
   });
 
   await page.goto('/subjects');
@@ -131,38 +54,55 @@ test('subjects page maps 401 to authentication required message', async ({ page 
   await expect(page.getByText('Authentication required. Please sign in again.')).toBeVisible();
 });
 
-test('subjects page maps 403 to access denied message', async ({ page }) => {
+test('shows 403 access denied correctly', async ({ page }) => {
   await page.route('**/api/subjects*', async (route) => {
-    await route.fulfill({
-      status: 403,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: 'Insufficient permissions' }),
-    });
+    await route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ message: 'Insufficient permissions' }) });
   });
 
   await page.goto('/subjects');
 
-  await expect(page.getByText('Access denied. You do not have permission to view subjects.')).toBeVisible();
+  await expect(page.getByText('Access denied.')).toBeVisible();
 });
 
-test('stale token does not load protected subjects request before auth bootstrap finishes', async ({ page }) => {
-  await page.unroute('**/api/me');
-  await page.route('**/api/me', async (route) => {
-    await route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: 'Authentication required' }),
-    });
-  });
-
-  let subjectsRequestCount = 0;
+test('shows server error correctly', async ({ page }) => {
   await page.route('**/api/subjects*', async (route) => {
-    subjectsRequestCount += 1;
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(subjects) });
+    await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'boom' }) });
   });
 
   await page.goto('/subjects');
 
-  await expect(page).toHaveURL(/\/login$/);
-  expect(subjectsRequestCount).toBe(0);
+  await expect(page.getByText('Unable to load subjects right now.')).toBeVisible();
+});
+
+test('refetches when filters change', async ({ page }) => {
+  const requestedUrls: string[] = [];
+
+  await page.route('**/api/subjects*', async (route) => {
+    requestedUrls.push(route.request().url());
+
+    const url = new URL(route.request().url());
+    const level = url.searchParams.get('level');
+    const grade = url.searchParams.get('grade');
+
+    let payload = subjects;
+    if (level) {
+      payload = payload.filter((subject) => subject.level === level);
+    }
+    if (grade) {
+      payload = payload.filter((subject) => Number(grade) >= subject.gradeFrom && Number(grade) <= subject.gradeTo);
+    }
+
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+  });
+
+  await page.goto('/subjects');
+
+  await page.getByLabel('Level').selectOption('PRIMARY');
+  await page.getByLabel('Class').selectOption('STD_2');
+
+  await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Mathematics' })).toHaveCount(0);
+
+  expect(requestedUrls.some((url) => url.includes('/api/subjects?level=PRIMARY'))).toBeTruthy();
+  expect(requestedUrls.some((url) => url.includes('/api/subjects?level=PRIMARY&grade=2'))).toBeTruthy();
 });

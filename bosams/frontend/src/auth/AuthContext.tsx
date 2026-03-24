@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import api, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, getAccessToken } from '../api/client';
+import api, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, clearStoredAuth, getAccessToken } from '../api/client';
 import { User } from '../types/auth';
 
 type Ctx = { user?: User; login: (email: string, password: string) => Promise<User>; logout: () => void };
@@ -10,11 +10,6 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User>();
   const [loading, setLoading] = useState(true);
-  const clearStoredAuth = () => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-  };
-
   const load = async (): Promise<User> => {
     const r = await api.get('/me');
     setUser(r.data);
@@ -54,8 +49,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     if (import.meta.env.DEV) {
       console.info('[auth] login success', {
-        hasAccessTokenInStorage: Boolean(localStorage.getItem(ACCESS_TOKEN_KEY)),
-        hasRefreshTokenInStorage: Boolean(localStorage.getItem(REFRESH_TOKEN_KEY)),
+        accessTokenStorageKey: ACCESS_TOKEN_KEY,
+        refreshTokenStorageKey: REFRESH_TOKEN_KEY,
+        hasAccessTokenInStorage: Boolean(localStorage.getItem(ACCESS_TOKEN_KEY) || sessionStorage.getItem(ACCESS_TOKEN_KEY)),
+        hasRefreshTokenInStorage: Boolean(localStorage.getItem(REFRESH_TOKEN_KEY) || sessionStorage.getItem(REFRESH_TOKEN_KEY)),
         loginRole: r.data?.user?.role,
       });
     }

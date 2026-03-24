@@ -57,6 +57,39 @@ class AuthLoginIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+
+    @Test
+    void validTokensReturn200ForProtectedAcademicEndpoints() throws Exception {
+        String adminToken = login("admin@bosams.local", "password", "ADMIN");
+        String teacherToken = login("teacher@bosams.local", "password", "TEACHER");
+
+        String yearBody = mockMvc.perform(get("/api/academic-years/current")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        int year = objectMapper.readTree(yearBody).get("year").asInt();
+
+        mockMvc.perform(get("/api/subjects")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/learners")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/terms")
+                        .param("year", String.valueOf(year))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/teacher/my-assignments")
+                        .header("Authorization", "Bearer " + teacherToken))
+                .andExpect(status().isOk());
+    }
+
     @Test
     void teacherLoginCanAccessTeacherEndpointButNotAdminEndpoint() throws Exception {
         String accessToken = login("teacher@bosams.local", "password", "TEACHER");

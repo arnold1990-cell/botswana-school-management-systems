@@ -2,35 +2,54 @@ import { useEffect, useState } from 'react';
 import api from '../api/client';
 
 type Subject = { id: number; name: string };
+type Term = { id: number; termNo: number };
 type Row = { learnerName: string; catScore?: number; examScore?: number; total: number; finalGrade: string };
 
 export const ReportsPage = () => {
   const [year, setYear] = useState<number>();
   const [termNumber, setTermNumber] = useState(1);
+  const [terms, setTerms] = useState<Term[]>([]);
   const [gradeLevel, setGradeLevel] = useState(1);
   const [subjectId, setSubjectId] = useState<number>();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => { (async () => {
-    const y = (await api.get('/academic-years/current')).data.year;
-    setYear(y);
-    const sub = (await api.get('/subjects')).data;
-    setSubjects(sub);
-    setSubjectId(sub[0]?.id);
+    try {
+      const y = (await api.get('/academic-years/current')).data.year;
+      setYear(y);
+      const [termResponse, subResponse] = await Promise.all([
+        api.get('/terms', { params: { year: y } }),
+        api.get('/subjects'),
+      ]);
+      setTerms(termResponse.data ?? []);
+      setTermNumber(termResponse.data?.[0]?.termNo ?? 1);
+      setSubjects(subResponse.data ?? []);
+      setSubjectId(subResponse.data?.[0]?.id);
+    } catch {
+      setError('Failed to load reports setup.');
+    }
   })(); }, []);
 
   const load = async () => {
     if (!year || !subjectId) return;
-    const res = await api.get('/reports/term', { params: { year, termNumber, gradeLevel, subjectId } });
-    setRows(res.data);
+    try {
+      setError('');
+      const res = await api.get('/reports/term', { params: { year, termNumber, gradeLevel, subjectId } });
+      setRows(res.data);
+    } catch {
+      setError('Unable to load report for selected filters.');
+      setRows([]);
+    }
   };
 
   return <section>
     <h2>Reports</h2>
+    {error && <p className='muted'>{error}</p>}
     <article className='card form-grid'>
       <label>Year <input value={year ?? ''} disabled /></label>
-      <label>Term <select value={termNumber} onChange={(e)=>setTermNumber(Number(e.target.value))}>{[1,2,3].map(t => <option key={t}>{t}</option>)}</select></label>
+      <label>Term <select value={termNumber} onChange={(e)=>setTermNumber(Number(e.target.value))}>{terms.map(t => <option key={t.id} value={t.termNo}>Term {t.termNo}</option>)}</select></label>
       <label>Grade <select value={gradeLevel} onChange={(e)=>setGradeLevel(Number(e.target.value))}>{[1,2,3,4,5,6,7].map(g => <option key={g}>{g}</option>)}</select></label>
       <label>Subject <select value={subjectId} onChange={(e)=>setSubjectId(Number(e.target.value))}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       <button className='btn btn-primary' onClick={load}>Load report</button>

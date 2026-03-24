@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 
 type AcademicYear = { year: number };
 type Term = { id: number; termNo: number };
-type Task = { id: number; type: 'CAT'|'EXAM' };
+type Task = { id: number; type: string; title: string };
 type Subject = { id: number; name: string };
 type Learner = { id: number; admissionNo: string; firstName: string; lastName: string };
 type MarkEntry = { learner: Learner; score: number };
@@ -36,6 +36,7 @@ export const MarksEntryPage = () => {
   const [status, setStatus] = useState<'DRAFT' | 'SUBMITTED'>('DRAFT');
   const [testTypes, setTestTypes] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string>('');
+  const [saveMessage, setSaveMessage] = useState<string>('');
 
   useEffect(() => { (async () => {
     try {
@@ -65,7 +66,7 @@ export const MarksEntryPage = () => {
 
   useEffect(() => {
     if (!termId) return;
-    api.get('/tasks', { params: { termId } })
+    api.get('/tasks', { params: { termId, gradeLevel, subjectId } })
       .then((r) => {
         setTasks(r.data);
         setTaskId(r.data[0]?.id);
@@ -74,7 +75,7 @@ export const MarksEntryPage = () => {
         }
       })
       .catch((error) => setLoadError(toMessage(error, 'Failed to load tasks for selected term.')));
-  }, [termId]);
+  }, [termId, gradeLevel, subjectId]);
 
   useEffect(() => {
     api.get('/subjects', { params: { grade: gradeLevel } })
@@ -110,9 +111,15 @@ export const MarksEntryPage = () => {
 
   const save = async () => {
     if (!subjectId || !taskId) return;
-    await api.post('/marks/bulk', { subjectId, taskId, marks: rows.map(r => ({ learnerId: r.id, score: Number(r.score) })) });
-    alert('Marks saved successfully');
-    setStatus('DRAFT');
+    setLoadError('');
+    try {
+      await api.post('/marks/bulk', { subjectId, taskId, marks: rows.map(r => ({ learnerId: r.id, score: Number(r.score) })) });
+      setSaveMessage('Marks saved successfully.');
+      const statusResponse = await api.get('/marks/status', { params: { subjectId, taskId, gradeLevel } });
+      setStatus(statusResponse.data.status);
+    } catch (error) {
+      setLoadError(toMessage(error, 'Unable to save marks.'));
+    }
   };
 
   const submit = async () => {
@@ -132,11 +139,12 @@ export const MarksEntryPage = () => {
   return <section>
     <h2>Marks Entry</h2>
     {loadError && <p>{loadError}</p>}
+    {saveMessage && <p>{saveMessage}</p>}
     {locked && <p>Submitted/Locked</p>}
     <article className='card form-grid'>
       <label>Year <input value={year ?? ''} disabled /></label>
       <label>Term <select value={termId} onChange={(e)=>setTermId(Number(e.target.value))}>{terms.map(t => <option key={t.id} value={t.id}>Term {t.termNo}</option>)}</select></label>
-      <label>Task <select value={taskId} onChange={(e)=>setTaskId(Number(e.target.value))}>{tasks.map(t => <option key={t.id} value={t.id}>{t.type}</option>)}</select></label>
+      <label>Task <select value={taskId} onChange={(e)=>setTaskId(Number(e.target.value))}>{tasks.map(t => <option key={t.id} value={t.id}>{t.title || t.type}</option>)}</select></label>
       <label>Grade <select value={gradeLevel} onChange={(e)=>setGradeLevel(Number(e.target.value))}>{[1,2,3,4,5,6,7].map(g=><option key={g}>{g}</option>)}</select></label>
       <label>Subject <select value={subjectId} onChange={(e)=>setSubjectId(Number(e.target.value))}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       <label>Test Types <input value={testTypes.join(', ')} disabled /></label>
@@ -146,7 +154,7 @@ export const MarksEntryPage = () => {
         <tbody>{rows.map(r => <tr key={r.id}><td>{r.admissionNo} - {r.firstName} {r.lastName}</td><td><input disabled={locked} type='number' min={0} max={50} value={r.score} onChange={(e)=>setScores({...scores, [r.id]: Number(e.target.value)})} /></td><td>{gradeOf(Number(r.score))}</td></tr>)}</tbody>
       </table>
       {rows.length === 0 && <p>No learners found for this grade or your assignment scope.</p>}
-      <button className='btn btn-primary' disabled={locked} onClick={save}>Save Draft</button>
+      <button className='btn btn-primary' disabled={locked || !taskId || !subjectId || rows.length === 0} onClick={save}>Save</button>
       {user?.role === 'TEACHER' && <button className='btn btn-secondary' disabled={locked} onClick={submit}>Submit</button>}
       {(user?.role === 'ADMIN' || user?.role === 'PRINCIPAL') && locked && <button className='btn btn-secondary' onClick={unlock}>Unlock</button>}
     </article>

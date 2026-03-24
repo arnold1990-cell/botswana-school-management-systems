@@ -1,5 +1,6 @@
 package com.bosams.web;
 
+import com.bosams.domain.Enums;
 import com.bosams.domain.SubjectEntity;
 import com.bosams.repository.SubjectRepository;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class SubjectsControllerTest {
 
     @Test
     void list200() throws Exception {
-        when(subjects.findAll()).thenReturn(List.of(new SubjectEntity()));
+        when(subjects.findByStatusOrderBySchoolLevelAscGradeFromAscNameAsc(Enums.EntityStatus.ACTIVE)).thenReturn(List.of(new SubjectEntity()));
         mockMvc.perform(get("/api/subjects")).andExpect(status().isOk());
     }
 

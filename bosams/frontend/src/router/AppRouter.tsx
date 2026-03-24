@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '../auth/AuthContext';
 import { AppLayout } from '../layout/AppLayout';
 import { Login } from '../pages/Login';
-import { DashboardPage, TeacherDashboardPage } from '../pages/Pages';
+import { AccountantDashboardPage, DashboardPage, ParentDashboardPage, StudentDashboardPage, TeacherDashboardPage } from '../pages/Pages';
 import { TeachersPage } from '../pages/TeachersPage';
 import { LearnersPage } from '../pages/LearnersPage';
 import { SubjectsPage } from '../pages/SubjectsPage';
@@ -32,6 +32,18 @@ export const AppRouter = () => {
               <Route path='subjects' element={<SubjectsPage />} />
               <Route path='marks-entry' element={<MarksEntryPage />} />
               <Route path='reports' element={<ReportsPage />} />
+            </Route>
+
+            <Route element={<RoleProtectedRoute allowedRoles={['STUDENT']} />}>
+              <Route path='student/dashboard' element={<StudentDashboardPage />} />
+            </Route>
+
+            <Route element={<RoleProtectedRoute allowedRoles={['PARENT']} />}>
+              <Route path='parent/dashboard' element={<ParentDashboardPage />} />
+            </Route>
+
+            <Route element={<RoleProtectedRoute allowedRoles={['ACCOUNTANT']} />}>
+              <Route path='accountant/dashboard' element={<AccountantDashboardPage />} />
             </Route>
 
             <Route path='*' element={<Navigate to='/dashboard' replace />} />

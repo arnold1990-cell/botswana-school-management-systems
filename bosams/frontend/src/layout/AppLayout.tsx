@@ -7,20 +7,33 @@ export const AppLayout = () => {
 
   const navItems = user?.role === 'TEACHER'
     ? [
-        { to: '/teacher/dashboard', label: 'Teacher Dashboard' },
-        { to: '/learners', label: 'Learners' },
-        { to: '/subjects', label: 'Subjects' },
-        { to: '/marks-entry', label: 'Marks Entry' },
-        { to: '/reports', label: 'Reports' },
+      { to: '/teacher/dashboard', label: 'Teacher Dashboard' },
+      { to: '/learners', label: 'Learners' },
+      { to: '/subjects', label: 'Subjects' },
+      { to: '/marks-entry', label: 'Marks Entry' },
+      { to: '/reports', label: 'Reports' },
+    ]
+    : user?.role === 'STUDENT'
+      ? [
+        { to: '/student/dashboard', label: 'Student Dashboard' },
       ]
-    : [
-        { to: '/dashboard', label: 'Dashboard' },
-        { to: '/learners', label: 'Learners' },
-        { to: '/subjects', label: 'Subjects' },
-        { to: '/marks-entry', label: 'Marks Entry' },
-        { to: '/reports', label: 'Reports' },
-        { to: '/teachers', label: 'Teachers' },
-      ];
+      : user?.role === 'PARENT'
+        ? [
+          { to: '/parent/dashboard', label: 'Parent Dashboard' },
+        ]
+        : user?.role === 'ACCOUNTANT'
+          ? [
+            { to: '/accountant/dashboard', label: 'Accountant Dashboard' },
+            { to: '/reports', label: 'Reports' },
+          ]
+          : [
+            { to: '/dashboard', label: 'Dashboard' },
+            { to: '/learners', label: 'Learners' },
+            { to: '/subjects', label: 'Subjects' },
+            { to: '/marks-entry', label: 'Marks Entry' },
+            { to: '/reports', label: 'Reports' },
+            { to: '/teachers', label: 'Teachers' },
+          ];
 
   const onLogout = () => {
     logout();

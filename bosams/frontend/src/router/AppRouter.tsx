@@ -29,6 +29,7 @@ export const AppRouter = () => {
 
             <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'PRINCIPAL', 'TEACHER']} />}>
               <Route path='learners' element={<LearnersPage />} />
+              <Route path='students' element={<LearnersPage />} />
               <Route path='teacher/dashboard' element={<TeacherDashboardPage />} />
               <Route path='subjects' element={<SubjectsPage />} />
               <Route path='marks-entry' element={<MarksEntryPage />} />

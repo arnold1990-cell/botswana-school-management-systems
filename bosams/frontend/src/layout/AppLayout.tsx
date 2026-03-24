@@ -12,19 +12,33 @@ export const AppLayout = () => {
       { to: '/subjects', label: 'Subjects' },
       { to: '/marks-entry', label: 'Marks Entry' },
       { to: '/reports', label: 'Reports' },
+      { to: '/attendance', label: 'Attendance' },
+      { to: '/announcements', label: 'Announcements' },
+      { to: '/timetable', label: 'Timetable' },
+      { to: '/assignments', label: 'Assignments' },
     ]
     : user?.role === 'STUDENT'
       ? [
         { to: '/student/dashboard', label: 'Student Dashboard' },
+        { to: '/announcements', label: 'Announcements' },
+        { to: '/attendance', label: 'Attendance' },
+        { to: '/timetable', label: 'Timetable' },
+        { to: '/assignments', label: 'Assignments' },
       ]
       : user?.role === 'PARENT'
         ? [
           { to: '/parent/dashboard', label: 'Parent Dashboard' },
+          { to: '/announcements', label: 'Announcements' },
+          { to: '/attendance', label: 'Attendance' },
+          { to: '/timetable', label: 'Timetable' },
+          { to: '/fees', label: 'Fees' },
         ]
         : user?.role === 'ACCOUNTANT'
           ? [
             { to: '/accountant/dashboard', label: 'Accountant Dashboard' },
+            { to: '/fees', label: 'Fees' },
             { to: '/reports', label: 'Reports' },
+            { to: '/announcements', label: 'Announcements' },
           ]
           : [
             { to: '/dashboard', label: 'Dashboard' },
@@ -33,6 +47,16 @@ export const AppLayout = () => {
             { to: '/marks-entry', label: 'Marks Entry' },
             { to: '/reports', label: 'Reports' },
             { to: '/teachers', label: 'Teachers' },
+            { to: '/attendance', label: 'Attendance' },
+            { to: '/announcements', label: 'Announcements' },
+            { to: '/timetable', label: 'Timetable' },
+            { to: '/assignments', label: 'Assignments' },
+            { to: '/exams', label: 'Exams' },
+            { to: '/fees', label: 'Fees' },
+            { to: '/library', label: 'Library' },
+            { to: '/holidays', label: 'Holidays' },
+            { to: '/messages', label: 'Messages' },
+            { to: '/settings', label: 'Settings' },
           ];
 
   const onLogout = () => {

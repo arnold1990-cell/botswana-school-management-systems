@@ -10,4 +10,5 @@ public class Enums {
     public enum AssessmentType { CAT, EXAM }
     public enum GradeLetter { A, B, C, D, E, F }
     public enum MarkEntryStatus { DRAFT, SUBMITTED }
+    public enum AttendanceStatus { PRESENT, ABSENT, LATE, HALF_DAY }
 }

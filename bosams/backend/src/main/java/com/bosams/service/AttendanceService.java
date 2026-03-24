@@ -32,15 +32,15 @@ public class AttendanceService {
     public List<AttendanceDto.AttendanceResponse> markAttendance(UserEntity actor, AttendanceDto.AttendanceMarkRequest request) {
         var attendanceDate = request.attendanceDate() == null ? LocalDate.now() : request.attendanceDate();
         if (actor.getRole() == Enums.Role.TEACHER && assignments.findByTeacherUserId(actor.getId()).stream().noneMatch(a -> a.getGradeLevel().equals(request.gradeLevel()) && a.isActive())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Teacher is not assigned to the selected grade");
+            throw new ApiException(HttpStatus.FORBIDDEN, "NOT_ASSIGNED", "Teacher is not assigned to the selected grade");
         }
 
         return request.items().stream().map(item -> {
             StudentEntity student = students.findById(item.studentId())
-                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Student not found: " + item.studentId()));
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Student not found: " + item.studentId()));
 
             if (student.getGradeLevel() == null || !student.getGradeLevel().equals(request.gradeLevel())) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "Student %s is not in grade %s".formatted(student.getAdmissionNo(), request.gradeLevel()));
+                throw new ApiException(HttpStatus.BAD_REQUEST, "GRADE_MISMATCH", "Student %s is not in grade %s".formatted(student.getAdmissionNo(), request.gradeLevel()));
             }
 
             AttendanceRecordEntity record = attendanceRecords.findByAttendanceDateAndStudentId(attendanceDate, student.getId())

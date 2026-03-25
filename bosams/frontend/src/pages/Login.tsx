@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { SESSION_EXPIRED_MESSAGE_KEY } from '../api/client';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,7 +10,19 @@ export const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sessionExpired = params.get('sessionExpired') === '1';
+    const storedMessage = sessionStorage.getItem(SESSION_EXPIRED_MESSAGE_KEY);
+
+    if (sessionExpired || storedMessage) {
+      setError(storedMessage ?? 'Your session expired. Please sign in again.');
+      sessionStorage.removeItem(SESSION_EXPIRED_MESSAGE_KEY);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     if (authLoading || !user) {

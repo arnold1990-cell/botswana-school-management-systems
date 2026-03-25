@@ -37,13 +37,13 @@ export const DashboardPage = () => (
 );
 
 export const TeacherDashboardPage = () => {
-  const { authReady, authLoading } = useAuthReady();
+  const { authReady, authLoading, isAuthenticated } = useAuthReady();
   const [assignments, setAssignments] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !isAuthenticated) return;
     api.get('/teacher/my-assignments').then((res) => setAssignments(res.data));
-  }, [authReady]);
+  }, [authReady, isAuthenticated]);
 
   return (
     <section>

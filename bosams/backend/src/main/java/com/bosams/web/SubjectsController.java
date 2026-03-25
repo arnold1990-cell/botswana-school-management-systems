@@ -21,7 +21,7 @@ public class SubjectsController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','TEACHER','ACCOUNTANT')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     public List<SubjectDto.SubjectResponse> list(@RequestParam(required = false) Integer grade,
                                                  @RequestParam(required = false) Enums.SchoolLevel level) {
         return subjectsService.listSubjects(level, grade);

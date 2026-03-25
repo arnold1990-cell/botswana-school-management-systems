@@ -114,6 +114,16 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void subjectsWithAccountantTokenReturn403() throws Exception {
+        UserEntity accountant = TestDataFactory.user(UUID.fromString("88888888-8888-8888-8888-888888888888"), Enums.Role.ACCOUNTANT);
+        when(userRepository.findById(accountant.getId())).thenReturn(Optional.of(accountant));
+        String token = jwtService.generateAccessToken(accountant.getId(), "ACCOUNTANT");
+
+        mockMvc.perform(get("/api/subjects").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void learnersWithoutTokenReturn401() throws Exception {
         mockMvc.perform(get("/api/learners"))
                 .andExpect(status().isUnauthorized());

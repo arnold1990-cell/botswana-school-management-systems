@@ -7,6 +7,8 @@ import com.bosams.repository.UserRepository;
 import com.bosams.service.AcademicsService;
 import com.bosams.testutil.TestConstants;
 import com.bosams.testutil.TestDataFactory;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +19,10 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
+import java.time.Duration;
+import java.util.Date;
+import java.nio.charset.StandardCharsets;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -92,6 +98,16 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void subjectsWithTeacherTokenAndLegacyEmailSubjectReturn200() throws Exception {
+        UserEntity teacher = TestDataFactory.user(UUID.fromString("45454545-4545-4545-4545-454545454545"), Enums.Role.TEACHER);
+        when(userRepository.findByEmail(teacher.getEmail())).thenReturn(Optional.of(teacher));
+        String token = createLegacyEmailSubjectAccessToken(teacher.getEmail(), "TEACHER");
+
+        mockMvc.perform(get("/api/subjects").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
 
     @Test
     void subjectsWithAdminTokenReturn200() throws Exception {
@@ -124,6 +140,19 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void subjectsWithFiltersAndTeacherTokenReturn200() throws Exception {
+        UserEntity teacher = TestDataFactory.user(UUID.fromString("49494949-4949-4949-4949-494949494949"), Enums.Role.TEACHER);
+        when(userRepository.findById(teacher.getId())).thenReturn(Optional.of(teacher));
+        String token = jwtService.generateAccessToken(teacher.getId(), "TEACHER");
+
+        mockMvc.perform(get("/api/subjects")
+                        .param("level", "PRIMARY")
+                        .param("grade", "3")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void learnersWithoutTokenReturn401() throws Exception {
         mockMvc.perform(get("/api/learners"))
                 .andExpect(status().isUnauthorized());
@@ -137,5 +166,16 @@ class SecurityIntegrationTest {
 
         mockMvc.perform(get("/api/learners").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk());
+    }
+
+    private String createLegacyEmailSubjectAccessToken(String email, String role) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(email)
+                .claim("role", role)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(Duration.ofMinutes(15))))
+                .signWith(Keys.hmacShaKeyFor(TestConstants.JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
+                .compact();
     }
 }

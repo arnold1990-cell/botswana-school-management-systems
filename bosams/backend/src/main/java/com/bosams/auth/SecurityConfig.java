@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Configuration
@@ -57,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/password-reset-requests").permitAll()
+                        .requestMatchers("/api/subjects/**").hasAnyRole("ADMIN", "TEACHER")
                         .anyRequest().authenticated())
                 .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -122,23 +124,28 @@ class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         boolean hasAuthorizationHeader = authorizationHeader != null;
-        boolean hasBearerPrefix = hasAuthorizationHeader && authorizationHeader.startsWith("Bearer ");
+        String normalizedAuthorizationHeader = hasAuthorizationHeader ? authorizationHeader.trim() : null;
+        boolean hasBearerPrefix = normalizedAuthorizationHeader != null
+                && normalizedAuthorizationHeader.regionMatches(true, 0, "Bearer ", 0, 7);
+        String authorizationPreview = hasAuthorizationHeader
+                ? authorizationHeader.substring(0, Math.min(24, authorizationHeader.length()))
+                : "<missing>";
         log.info("JWT FILTER path={} method={} hasAuthorizationHeader={} hasBearerPrefix={}",
                 path, request.getMethod(), hasAuthorizationHeader, hasBearerPrefix);
+        log.debug("JWT FILTER authorizationHeaderPreview={}", authorizationPreview);
         if (!hasAuthorizationHeader || !hasBearerPrefix) {
             log.debug("NO TOKEN path={} method={}", path, request.getMethod());
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authorizationHeader.substring(7);
+        String token = normalizedAuthorizationHeader.substring(7).trim();
 
         try {
             Claims claims = jwtService.parse(token);
             log.info("JWT parsed successfully={}", true);
-            UUID userId = UUID.fromString(claims.getSubject());
             log.info("JWT VALID path={} method={} subject={} roleClaim={}", path, request.getMethod(), claims.getSubject(), claims.get("role"));
-            userRepository.findById(userId).ifPresentOrElse(u -> {
+            resolveUser(claims.getSubject()).ifPresentOrElse(u -> {
                 if (u.getStatus() != com.bosams.domain.Enums.UserStatus.ACTIVE) {
                     log.warn("INACTIVE USER userId={} path={} status={}", u.getId(), path, u.getStatus());
                     SecurityContextHolder.clearContext();
@@ -151,7 +158,7 @@ class JwtFilter extends OncePerRequestFilter {
                         path, request.getMethod(), u.getId(), u.getEmail(), u.getRole(), authentication.getAuthorities());
                 log.info("authenticated username={} role={}", u.getEmail(), u.getRole());
             }, () -> {
-                log.warn("USER NOT FOUND userId={} path={}", claims.getSubject(), path);
+                log.warn("USER NOT FOUND subject={} path={}", claims.getSubject(), path);
                 SecurityContextHolder.clearContext();
             });
         } catch (JwtException | IllegalArgumentException ex) {
@@ -161,5 +168,15 @@ class JwtFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private java.util.Optional<com.bosams.domain.UserEntity> resolveUser(String subject) {
+        try {
+            UUID userId = UUID.fromString(subject);
+            return userRepository.findById(userId);
+        } catch (IllegalArgumentException ignored) {
+            log.info("JWT subject is not UUID; attempting email lookup subject={}", subject);
+            return userRepository.findByEmail(subject.toLowerCase(Locale.ROOT));
+        }
     }
 }

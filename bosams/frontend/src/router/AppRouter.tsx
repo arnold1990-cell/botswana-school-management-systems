@@ -41,7 +41,6 @@ export const AppRouter = () => {
               <Route path='students/category' element={<StudentCategoriesPage />} />
               <Route path='students/reset-password' element={<StudentResetPasswordPage />} />
               <Route path='teacher/dashboard' element={<TeacherDashboardPage />} />
-              <Route path='subjects' element={<SubjectsPage />} />
               <Route path='marks-entry' element={<MarksEntryPage />} />
               <Route path='reports' element={<ReportsPage />} />
               <Route path='attendance' element={<AttendancePage />} />
@@ -54,6 +53,10 @@ export const AppRouter = () => {
               <Route path='holidays' element={<HolidaysPage />} />
               <Route path='messages' element={<MessagesPage />} />
               <Route path='settings' element={<SettingsPage />} />
+            </Route>
+
+            <Route element={<RoleProtectedRoute allowedRoles={['ADMIN', 'TEACHER']} />}>
+              <Route path='subjects' element={<SubjectsPage />} />
             </Route>
 
             <Route element={<RoleProtectedRoute allowedRoles={['STUDENT']} />}>

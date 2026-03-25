@@ -7,6 +7,20 @@ const teacherUser = {
   role: 'TEACHER',
 };
 
+const adminUser = {
+  id: '3f0f8d0d-8f95-4fd0-9793-0b6f97830dad',
+  fullName: 'Admin Test',
+  email: 'admin@bosams.local',
+  role: 'ADMIN',
+};
+
+const studentUser = {
+  id: '4f0f8d0d-8f95-4fd0-9793-0b6f97830dad',
+  fullName: 'Student Test',
+  email: 'student@bosams.local',
+  role: 'STUDENT',
+};
+
 const subjects = [
   { id: 1, name: 'English', code: 'PRIMARY_ENGLISH', level: 'PRIMARY', gradeFrom: 1, gradeTo: 4, elective: false },
   { id: 2, name: 'Mathematics', code: 'JUNIOR_MATHEMATICS', level: 'JUNIOR_SECONDARY', gradeFrom: 8, gradeTo: 10, elective: false },
@@ -14,7 +28,7 @@ const subjects = [
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem('bosams_access_token', 'fake-token');
+    localStorage.setItem('accessToken', 'fake-token');
   });
 
   await page.route('**/api/me', async (route) => {
@@ -76,9 +90,11 @@ test('shows server error correctly', async ({ page }) => {
 
 test('refetches when filters change', async ({ page }) => {
   const requestedUrls: string[] = [];
+  const authorizationHeaders: string[] = [];
 
   await page.route('**/api/subjects*', async (route) => {
     requestedUrls.push(route.request().url());
+    authorizationHeaders.push(route.request().headers().authorization ?? '');
 
     const url = new URL(route.request().url());
     const level = url.searchParams.get('level');
@@ -105,4 +121,32 @@ test('refetches when filters change', async ({ page }) => {
 
   expect(requestedUrls.some((url) => url.includes('/api/subjects?level=PRIMARY'))).toBeTruthy();
   expect(requestedUrls.some((url) => url.includes('/api/subjects?level=PRIMARY&grade=2'))).toBeTruthy();
+  expect(authorizationHeaders.every((header) => header === 'Bearer fake-token')).toBeTruthy();
+});
+
+test('allows admin access to subjects page', async ({ page }) => {
+  await page.route('**/api/me', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(adminUser) });
+  });
+  await page.route('**/api/subjects*', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(subjects) });
+  });
+
+  await page.goto('/subjects');
+
+  await expect(page.getByRole('heading', { name: 'Subjects' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'English' })).toBeVisible();
+});
+
+test('blocks student access to subjects page', async ({ page }) => {
+  await page.route('**/api/me', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(studentUser) });
+  });
+  await page.route('**/api/subjects*', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(subjects) });
+  });
+
+  await page.goto('/subjects');
+
+  await expect(page).toHaveURL(/\/student\/dashboard$/);
 });

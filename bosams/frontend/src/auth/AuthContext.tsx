@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const bootstrap = async () => {
-      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+      const token = getAccessToken();
       if (import.meta.env.DEV) {
         console.info('[auth] bootstrap token read', { hasToken: Boolean(token) });
       }
@@ -87,6 +87,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     bootstrap();
   }, []);
 
+  useEffect(() => {
+    const syncAuthFromToken = () => {
+      const token = getAccessToken();
+      if (!token || !hasValidToken(token)) {
+        setUser(undefined);
+        setIsAuthenticated(false);
+      }
+    };
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ACCESS_TOKEN_KEY) {
+        syncAuthFromToken();
+      }
+    };
+
+    window.addEventListener('bosams:auth-cleared', syncAuthFromToken);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener('bosams:auth-cleared', syncAuthFromToken);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
   const login = async (email: string, password: string): Promise<User> => {
     clearStoredAuth();
     sessionStorage.clear();
@@ -96,7 +120,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const jwtValue = getLoginToken(loginResponse);
     if (jwtValue) {
       localStorage.setItem(ACCESS_TOKEN_KEY, jwtValue);
-      console.log('Token stored:', localStorage.getItem(ACCESS_TOKEN_KEY));
       setIsAuthenticated(true);
     } else {
       clearStoredAuth();

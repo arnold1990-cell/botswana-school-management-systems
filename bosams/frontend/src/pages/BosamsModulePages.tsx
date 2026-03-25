@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { useAuthReady } from '../auth/useAuthReady';
 
 type Announcement = {
   id: number;
@@ -81,6 +82,7 @@ const ModulePage = ({
 
 export const AttendancePage = () => {
   const { user } = useAuth();
+  const { authReady, isAuthenticated } = useAuthReady();
   const [gradeLevel, setGradeLevel] = useState(1);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -103,10 +105,10 @@ export const AttendancePage = () => {
   };
 
   useEffect(() => {
-    if (canMark) {
+    if (authReady && isAuthenticated && canMark) {
       load();
     }
-  }, [canMark, gradeLevel, date]);
+  }, [authReady, isAuthenticated, canMark, gradeLevel, date]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -187,6 +189,7 @@ export const AttendancePage = () => {
 
 export const AnnouncementsPage = () => {
   const { user } = useAuth();
+  const { authReady, isAuthenticated } = useAuthReady();
   const [items, setItems] = useState<Announcement[]>([]);
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -206,7 +209,10 @@ export const AnnouncementsPage = () => {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authReady || !isAuthenticated) return;
+    load();
+  }, [authReady, isAuthenticated]);
 
   const publish = async (event: FormEvent) => {
     event.preventDefault();

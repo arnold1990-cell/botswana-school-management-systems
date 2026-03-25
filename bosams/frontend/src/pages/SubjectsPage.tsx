@@ -41,7 +41,7 @@ const mapStateFromError = (error: unknown): LoadState => {
 };
 
 export const SubjectsPage = () => {
-  const { authReady, authLoading, isAuthenticated } = useAuthReady();
+  const { authReady, authLoading, isAuthenticated, user } = useAuthReady();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [level, setLevel] = useState<LevelFilter>('ALL');
   const [selectedClass, setSelectedClass] = useState<ClassFilter>('ALL');
@@ -72,7 +72,7 @@ export const SubjectsPage = () => {
   }, [level, selectedClass]);
 
   useEffect(() => {
-    if (!authReady || !isAuthenticated) return;
+    if (!authReady || !isAuthenticated || !user) return;
     const selectedOption = classOptions.find((option) => option.value === selectedClass);
     const grade = selectedOption?.grade;
     const requestLevel = level !== 'ALL' ? level : selectedOption?.level;
@@ -91,7 +91,7 @@ export const SubjectsPage = () => {
     };
 
     loadSubjects();
-  }, [authReady, isAuthenticated, level, selectedClass]);
+  }, [authReady, isAuthenticated, user, level, selectedClass]);
 
   return <section>
     <h2>Subjects</h2>
